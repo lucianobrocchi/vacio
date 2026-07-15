@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#221F1A"/>
+  <!-- Zona segura maskable: el dibujo vive en el 60% central -->
+  <g stroke="#C79A3B" stroke-width="3.2" stroke-linecap="round" fill="none">
+    <line x1="25" y1="18" x2="40" y2="41"/>
+    <line x1="40" y1="18" x2="25" y2="41"/>
+  </g>
+  <circle cx="23" cy="45" r="4.5" stroke="#C79A3B" stroke-width="3.2" fill="none"/>
+  <circle cx="42" cy="45" r="4.5" stroke="#C79A3B" stroke-width="3.2" fill="none"/>
+</svg>
