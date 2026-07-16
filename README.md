@@ -21,6 +21,7 @@ Marca: **Carbón `#221F1A`** + **Oro `#C79A3B`**, tipografías **Cabinet Grotesk
 | **Reservas públicas** | Página `#/reservar` para el cliente: servicio → barbero → día/hora libre → datos → confirmación. Respeta horario, turnos ocupados y bloqueos | ✅ Hecho y verificado |
 | **Stats (premium)** | Dashboard por **hoy / semana / mes**: hero con facturado + tendencia (área con degradado) y comparativa, KPIs (cortes, ticket promedio, promedio/día), actividad por día, medios de pago (donut), servicios más pedidos, horas pico | ✅ Hecho y verificado |
 | **Barbería (dueño)** | Panel aparte: facturado del local, **comisiones a pagar y neto de la barbería**, detalle **por barbero** (facturado · comisión % · neto), turnos de hoy de todo el equipo | ✅ Hecho y verificado |
+| **Asistente IA + Feedback** | Burbuja flotante con **chat IA** (función serverless → API de Claude, con la key segura en el server) que ayuda a usar la app y responde sobre tus números, y una solapa de **feedback**. Fallbacks: FAQ local sin API key, mail si no hay webhook | ✅ Hecho y verificado |
 | **Ajustes** | Barberos (+ **% de comisión**), servicios y precios, **horario semanal**, **conectar Google Calendar** (Client ID + pasos), link de reservas (copiar), datos de demo, empezar de cero | ✅ Hecho y verificado |
 | **Backend (sync entre dispositivos + envío programado)** | Supabase (auth + sync), para que las reservas del cliente entren desde su teléfono y el recordatorio se mande solo | ⏳ Fase 2 |
 
@@ -41,6 +42,20 @@ ni secretos). Hace falta un **OAuth Client ID** de Google:
 El Client ID **no es secreto** (va en el frontend). El token de acceso vive ~1 h en el dispositivo;
 al vencer, la app lo vuelve a pedir en silencio. Sin Client ID, cada turno ofrece un link
 "Agregar a Google Calendar" como respaldo manual.
+
+### Asistente IA + Feedback (burbuja flotante)
+
+La burbuja de abajo a la derecha abre un chat con un **asistente IA** y una solapa de **feedback**.
+Corren sobre dos **funciones serverless** (`api/chat.ts`, `api/feedback.ts`) para no exponer secretos.
+Variables de entorno en **Vercel → proyecto vacio → Settings → Environment Variables**:
+
+| Variable | Para qué | Si falta |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Asistente IA real (API de Claude, modelo `claude-haiku-4-5`). | La burbuja responde con una **ayuda básica (FAQ)** local. |
+| `FEEDBACK_WEBHOOK_URL` | Recibir el feedback en un webhook (p. ej. Discord). | El feedback cae a **abrir un mail** a `feedbackEmail` (o al mail por defecto). |
+
+La API key **solo vive en el server** (nunca en el navegador). El asistente puede usar un resumen de
+tus números (facturado/servicios del período) para responder preguntas sobre el negocio.
 
 ---
 

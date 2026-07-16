@@ -164,6 +164,29 @@ export function IconoCopiar(props: Props) {
   );
 }
 
+/** Chispa / IA. */
+export function IconoChispa(props: Props) {
+  const { filled, ...rest } = props;
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M12 3l1.8 4.9L18.7 9.7 13.8 11.5 12 16.4 10.2 11.5 5.3 9.7 10.2 7.9 12 3Z"
+        fill={filled ? 'currentColor' : 'none'}
+        {...(rest as object)}
+      />
+      <path d="M18.5 15l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconoEnviar(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4.5 12h14M12.5 5.5 19 12l-6.5 6.5" />
+    </svg>
+  );
+}
+
 export function IconoPersona(props: Props) {
   return (
     <svg {...base(props)}>

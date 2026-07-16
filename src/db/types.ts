@@ -111,5 +111,7 @@ export interface Config {
   duracionTurnoDefault: number;
   /** OAuth Client ID de Google (para sincronizar con Google Calendar). */
   googleClientId?: string;
+  /** Email donde recibir el feedback (fallback si no hay webhook). */
+  feedbackEmail?: string;
   onboardingCompletado: boolean;
 }

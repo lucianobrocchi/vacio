@@ -10,6 +10,7 @@ import { Stats } from './features/stats/Stats';
 import { Barberia } from './features/duenio/Barberia';
 import { Ajustes } from './features/ajustes/Ajustes';
 import { Reservar } from './features/reservar/Reservar';
+import { AsistenteBurbuja } from './components/AsistenteBurbuja';
 import type { Config } from './db/types';
 
 /** Ruta por hash: "#/reservar" es la página pública para clientes. */
@@ -49,6 +50,7 @@ function AppShell({ config }: { config: Config }) {
       {tab === 'barberia' && config.esDuenio && <Barberia config={config} />}
       {tab === 'ajustes' && <Ajustes config={config} />}
 
+      <AsistenteBurbuja config={config} />
       <BottomNav activa={tab} onCambiar={setTab} esDuenio={config.esDuenio} />
     </div>
   );
