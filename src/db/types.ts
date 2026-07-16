@@ -14,6 +14,8 @@ export interface Barbero {
   uuid: string;
   nombre: string;
   emoji?: string;
+  /** Comisión del barbero, en % de lo que factura (0–100). Default 50. */
+  comision: number;
   orden: number;
   activo: 0 | 1;
   updatedAt: number;
@@ -71,6 +73,8 @@ export interface Turno {
   estado: EstadoTurno;
   origen: OrigenTurno;
   nota?: string;
+  /** ID del evento en Google Calendar, si se sincronizó. */
+  googleEventId?: string;
   creadoEn: number;
   updatedAt: number;
 }
@@ -105,5 +109,7 @@ export interface Config {
   horario: HorarioDia[];
   /** Paso de la grilla de turnos, en minutos. */
   duracionTurnoDefault: number;
+  /** OAuth Client ID de Google (para sincronizar con Google Calendar). */
+  googleClientId?: string;
   onboardingCompletado: boolean;
 }

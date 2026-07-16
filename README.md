@@ -16,14 +16,31 @@ Marca: **Carbón `#221F1A`** + **Oro `#C79A3B`**, tipografías **Cabinet Grotesk
 | Módulo | Qué incluye | Estado |
 |---|---|---|
 | **Fichar** | Anotar cada corte en 2 toques (servicio, precio, hora, medio de pago, cliente opcional). Lista del día, editar/borrar, resumen efectivo/transferencia | ✅ Hecho y verificado |
-| **Agenda** | Calendario por día, turnos con datos del cliente, **confirmar por WhatsApp/email** (mensaje pre-armado), recordatorio, marcar hecho → ficha el corte solo, **bloqueos de horario** | ✅ Hecho y verificado |
+| **Agenda (tipo Google Calendar)** | Grilla de horarios por día (bloques posicionados por hora, línea de "ahora", **tap para crear**) + vista lista. Turnos con datos del cliente, **confirmar por WhatsApp/email**, recordatorio, marcar hecho → ficha el corte solo, **bloqueos de horario** | ✅ Hecho y verificado |
+| **Google Calendar** | Conectás tu cuenta (Google Identity Services, sin backend) y cada turno se crea/actualiza/cancela en tu Google Calendar con el cliente como invitado y `sendUpdates=all` → **Google manda la invitación y los recordatorios al cliente y al barbero**. Fallback "Agregar a Google Calendar" (deep link) si no está conectado | ✅ Hecho y verificado |
 | **Reservas públicas** | Página `#/reservar` para el cliente: servicio → barbero → día/hora libre → datos → confirmación. Respeta horario, turnos ocupados y bloqueos | ✅ Hecho y verificado |
-| **Stats** | Dashboard por **hoy / semana / mes**: facturado, cortes, promedios, comparativa vs. período anterior, cortes por día, medios de pago, ranking de servicios, horas pico | ✅ Hecho y verificado |
-| **Barbería (dueño)** | Panel aparte: total de la barbería, **ranking por barbero**, turnos de hoy de todo el equipo | ✅ Hecho y verificado |
-| **Ajustes** | Barberos, servicios y precios, **horario semanal**, link de reservas (copiar), datos de demo, empezar de cero | ✅ Hecho y verificado |
-| **Backend (sync + envío automático)** | Supabase (auth + sync), envío real de WhatsApp/email programado | ⏳ Fase 2 |
+| **Stats (premium)** | Dashboard por **hoy / semana / mes**: hero con facturado + tendencia (área con degradado) y comparativa, KPIs (cortes, ticket promedio, promedio/día), actividad por día, medios de pago (donut), servicios más pedidos, horas pico | ✅ Hecho y verificado |
+| **Barbería (dueño)** | Panel aparte: facturado del local, **comisiones a pagar y neto de la barbería**, detalle **por barbero** (facturado · comisión % · neto), turnos de hoy de todo el equipo | ✅ Hecho y verificado |
+| **Ajustes** | Barberos (+ **% de comisión**), servicios y precios, **horario semanal**, **conectar Google Calendar** (Client ID + pasos), link de reservas (copiar), datos de demo, empezar de cero | ✅ Hecho y verificado |
+| **Backend (sync entre dispositivos + envío programado)** | Supabase (auth + sync), para que las reservas del cliente entren desde su teléfono y el recordatorio se mande solo | ⏳ Fase 2 |
 
 Build limpio (`npm run build` pasa el typecheck estricto). Verificado de punta a punta en el navegador.
+
+### Conectar Google Calendar (una vez, gratis)
+
+La sincronización real corre **desde el navegador** con Google Identity Services (no hay backend
+ni secretos). Hace falta un **OAuth Client ID** de Google:
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → nuevo proyecto.
+2. APIs y servicios → Biblioteca → activá **Google Calendar API**.
+3. Pantalla de consentimiento OAuth → **Externo** → cargá tu mail.
+4. Credenciales → Crear → **ID de cliente OAuth** → **Aplicación web**.
+5. En **Orígenes de JavaScript autorizados** pegá el dominio de la app (Vercel).
+6. Copiá el Client ID y pegalo en **Ajustes → Google Calendar → Conectar**.
+
+El Client ID **no es secreto** (va en el frontend). El token de acceso vive ~1 h en el dispositivo;
+al vencer, la app lo vuelve a pedir en silencio. Sin Client ID, cada turno ofrece un link
+"Agregar a Google Calendar" como respaldo manual.
 
 ---
 

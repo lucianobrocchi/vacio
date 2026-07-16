@@ -6,7 +6,9 @@ import {
   crearBarbero,
   actualizarBarbero,
   desactivarBarbero,
+  COMISION_DEFAULT,
 } from '../../db/barberos';
+import { conectarGoogle, desconectarGoogle, googleConectado } from '../../lib/googleCalendar';
 import {
   listarServicios,
   crearServicio,
@@ -20,7 +22,14 @@ import { NOMBRES_DIAS, horaAMin, minAHora } from '../../lib/fecha';
 import { Pantalla } from '../../components/Pantalla';
 import { Sheet } from '../../components/Sheet';
 import { Campo } from '../../components/Campo';
-import { IconoCopiar, IconoLink, IconoMas, IconoTacho } from '../../components/Iconos';
+import {
+  IconoCalendario,
+  IconoCheck,
+  IconoCopiar,
+  IconoLink,
+  IconoMas,
+  IconoTacho,
+} from '../../components/Iconos';
 import type { Barbero, Config, Servicio } from '../../db/types';
 import { copy } from './ajustes.copy';
 
@@ -212,6 +221,10 @@ export function Ajustes({ config }: { config: Config }) {
         <p className="text-xs text-carbon-900/45">{copy.reservas.aviso}</p>
       </div>
 
+      {/* Google Calendar */}
+      <h3 className={tituloSeccion}>{copy.google.titulo}</h3>
+      <GoogleSection config={config} />
+
       {/* Datos */}
       <h3 className={tituloSeccion}>{copy.datos.titulo}</h3>
       <div className="card space-y-4 p-4">
@@ -317,6 +330,100 @@ function FilaHorario({ dia, config }: { dia: number; config: Config }) {
   );
 }
 
+/** Conectar la cuenta de Google Calendar (client-side, con GIS). */
+function GoogleSection({ config }: { config: Config }) {
+  const g = copy.google;
+  const [clientId, setClientId] = useState(config.googleClientId ?? '');
+  const [conectado, setConectado] = useState(googleConectado());
+  const [estado, setEstado] = useState<'idle' | 'conectando' | 'error'>('idle');
+  const [ayuda, setAyuda] = useState(false);
+
+  async function conectar() {
+    const id = clientId.trim();
+    if (!id) return;
+    await actualizarConfig({ googleClientId: id });
+    setEstado('conectando');
+    try {
+      await conectarGoogle(id);
+      setConectado(true);
+      setEstado('idle');
+    } catch {
+      setEstado('error');
+    }
+  }
+
+  function desconectar() {
+    desconectarGoogle();
+    setConectado(false);
+  }
+
+  return (
+    <div className="card space-y-3 p-4">
+      <p className="text-sm text-carbon-900/60">{g.bajada}</p>
+
+      <span
+        className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+          conectado ? 'bg-ok/15 text-ok' : 'bg-carbon-100 text-carbon-900/50'
+        }`}
+      >
+        {conectado && <IconoCheck width={13} height={13} />}
+        {conectado ? g.conectado : g.desconectado}
+      </span>
+
+      <Campo label={g.clientId}>
+        <input
+          className="input-texto text-sm"
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          onBlur={() => actualizarConfig({ googleClientId: clientId.trim() || undefined })}
+          placeholder={g.clientIdPlaceholder}
+        />
+      </Campo>
+
+      {!conectado ? (
+        <button
+          type="button"
+          className="btn-primario py-3 text-base"
+          disabled={!clientId.trim() || estado === 'conectando'}
+          onClick={conectar}
+        >
+          <IconoCalendario width={20} height={20} />
+          {estado === 'conectando' ? g.conectando : g.conectar}
+        </button>
+      ) : (
+        <button type="button" className="btn-secundario py-3 text-base" onClick={desconectar}>
+          {g.desconectar}
+        </button>
+      )}
+
+      {estado === 'error' && <p className="text-sm font-semibold text-rojo">{g.error}</p>}
+      {!clientId.trim() && <p className="text-xs text-carbon-900/45">{g.faltaClientId}</p>}
+
+      <button
+        type="button"
+        className="text-left text-sm font-semibold text-carbon-900/60"
+        onClick={() => setAyuda(!ayuda)}
+      >
+        {ayuda ? '▲' : '▼'} {g.ayudaTitulo}
+      </button>
+      {ayuda && (
+        <div className="rounded-xl bg-carbon-50 p-3 text-xs text-carbon-900/70">
+          <ol className="list-decimal space-y-1 pl-4">
+            {g.pasos.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ol>
+          <p className="mt-2 break-all">
+            <b>{g.dominioActual}</b>
+            <br />
+            {location.origin}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BarberoSheet({
   abierto,
   onCerrar,
@@ -331,19 +438,26 @@ function BarberoSheet({
   const c = copy.barberos.sheet;
   const [nombre, setNombre] = useState('');
   const [emoji, setEmoji] = useState('');
+  const [comision, setComision] = useState(COMISION_DEFAULT);
 
   useEffect(() => {
     if (!abierto) return;
     setNombre(barbero?.nombre ?? '');
     setEmoji(barbero?.emoji ?? '');
+    setComision(barbero?.comision ?? COMISION_DEFAULT);
   }, [abierto, barbero]);
 
   async function guardar() {
     if (!nombre.trim()) return;
+    const pct = Math.max(0, Math.min(100, comision));
     if (barbero) {
-      await actualizarBarbero(barbero.uuid, { nombre: nombre.trim(), emoji: emoji.trim() || undefined });
+      await actualizarBarbero(barbero.uuid, {
+        nombre: nombre.trim(),
+        emoji: emoji.trim() || undefined,
+        comision: pct,
+      });
     } else {
-      await crearBarbero({ nombre: nombre.trim(), emoji: emoji.trim() || undefined });
+      await crearBarbero({ nombre: nombre.trim(), emoji: emoji.trim() || undefined, comision: pct });
     }
     onCerrar();
   }
@@ -373,6 +487,18 @@ function BarberoSheet({
             placeholder={c.emojiPlaceholder}
             maxLength={4}
           />
+        </Campo>
+        <Campo label={c.comision}>
+          <div className="flex items-center gap-2 rounded-2xl border-2 border-carbon/15 bg-white px-3">
+            <input
+              className="num w-full py-3 text-right text-lg font-semibold outline-none"
+              inputMode="numeric"
+              value={comision}
+              onChange={(e) => setComision(parseInt(e.target.value.replace(/\D/g, ''), 10) || 0)}
+            />
+            <span className="font-semibold text-carbon-900/40">%</span>
+          </div>
+          <span className="mt-1 block text-xs text-carbon-900/50">{c.comisionAyuda}</span>
         </Campo>
         <button type="button" className="btn-primario" disabled={!nombre.trim()} onClick={guardar}>
           {c.guardar}

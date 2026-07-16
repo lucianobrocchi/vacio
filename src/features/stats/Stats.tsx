@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { cortesEntre } from '../../db/cortes';
 import { listarBarberos } from '../../db/barberos';
+import { listarServicios } from '../../db/servicios';
 import {
   totales,
   variacion,
@@ -15,7 +16,8 @@ import { rangoPeriodo, rangoAnterior, formatFechaLarga, desdeClave } from '../..
 import { formatPesos } from '../../lib/format';
 import { Pantalla } from '../../components/Pantalla';
 import { BarberoChips } from '../../components/BarberoChips';
-import { GraficoBarras } from './GraficoBarras';
+import { AreaChart } from './graficos/AreaChart';
+import { Donut } from './graficos/Donut';
 import type { Config } from '../../db/types';
 import { copy } from './stats.copy';
 
@@ -26,14 +28,13 @@ export function Stats({ config }: { config: Config }) {
   const [barberoUuid, setBarberoUuid] = useState(config.barberoActivoUuid);
 
   const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
+  const servicios = useLiveQuery(() => listarServicios(true), []) ?? [];
+  const emojiDe = (nombre: string) => servicios.find((s) => s.nombre === nombre)?.emoji ?? '✂️';
 
   const [desde, hasta] = rangoPeriodo(periodo);
   const [desdeAnt, hastaAnt] = rangoAnterior(periodo);
 
-  const cortes = useLiveQuery(
-    () => cortesEntre(desde, hasta, barberoUuid),
-    [desde, hasta, barberoUuid],
-  );
+  const cortes = useLiveQuery(() => cortesEntre(desde, hasta, barberoUuid), [desde, hasta, barberoUuid]);
   const cortesAnt = useLiveQuery(
     () => cortesEntre(desdeAnt, hastaAnt, barberoUuid),
     [desdeAnt, hastaAnt, barberoUuid],
@@ -41,28 +42,33 @@ export function Stats({ config }: { config: Config }) {
 
   const t = totales(cortes ?? []);
   const tAnt = totales(cortesAnt ?? []);
-  const varFacturado = variacion(t.facturado, tAnt.facturado);
+  const varFact = variacion(t.facturado, tAnt.facturado);
 
   const serie = porDia(cortes ?? [], desde, hasta);
   const mejor = mejorDia(serie);
-  const servicios = porServicio(cortes ?? []);
+  const idxMejor = mejor ? serie.findIndex((p) => p.dia === mejor.dia) : undefined;
+  const servs = porServicio(cortes ?? []);
   const horas = porHora(cortes ?? []).filter((h) => h.hora >= 8 && h.hora <= 22);
   const maxHora = Math.max(...horas.map((h) => h.cortes), 1);
+  const horaPico = horas.reduce((m, h) => (h.cortes > m.cortes ? h : m), horas[0] ?? { hora: 0, cortes: 0 });
   const dias = Math.max(diasTranscurridos(desde, hasta), 1);
+
+  const vsLabel = periodo === 'hoy' ? copy.hero.vsHoy : periodo === 'semana' ? copy.hero.vsSemana : copy.hero.vsMes;
+  const hayDatos = (cortes ?? []).length > 0;
 
   return (
     <Pantalla titulo={copy.titulo}>
       <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
 
       {/* Selector de período */}
-      <div className="card mb-4 flex p-1">
+      <div className="mb-4 flex rounded-2xl bg-carbon-100 p-1">
         {(Object.keys(copy.periodos) as Periodo[]).map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => setPeriodo(p)}
             className={`flex-1 rounded-xl py-2 text-sm font-semibold transition ${
-              periodo === p ? 'bg-carbon text-white' : 'text-carbon-900/50'
+              periodo === p ? 'bg-white text-carbon shadow-card' : 'text-carbon-900/50'
             }`}
           >
             {copy.periodos[p]}
@@ -70,95 +76,100 @@ export function Stats({ config }: { config: Config }) {
         ))}
       </div>
 
-      {/* KPIs */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="card p-4">
-          <p className="text-sm font-semibold text-carbon-900/50">{copy.kpis.facturado}</p>
-          <p className="num text-2xl font-extrabold">{formatPesos(t.facturado)}</p>
-          {varFacturado != null && (
-            <p className={`text-xs font-semibold ${varFacturado >= 0 ? 'text-ok' : 'text-rojo'}`}>
-              {copy.vsAnterior(varFacturado)}
-            </p>
-          )}
+      {/* HERO: facturado + tendencia */}
+      <div className="relative mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-carbon-700 to-carbon-900 p-5 text-white shadow-card">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-oro">{copy.hero.facturado}</p>
+            {varFact != null && (
+              <span
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                  varFact >= 0 ? 'bg-ok/20 text-emerald-300' : 'bg-rojo/20 text-red-300'
+                }`}
+              >
+                {varFact >= 0 ? '▲' : '▼'} {Math.abs(Math.round(varFact))}% {vsLabel}
+              </span>
+            )}
+          </div>
+          <p className="num mt-1 text-[2.6rem] font-extrabold leading-none">{formatPesos(t.facturado)}</p>
+          <p className="mt-1.5 text-sm text-white/60">
+            {copy.hero.cortes(t.cortes)} · {copy.hero.prom} <span className="num">{formatPesos(t.promedio)}</span>
+          </p>
         </div>
-        <div className="card p-4">
-          <p className="text-sm font-semibold text-carbon-900/50">{copy.kpis.cortes}</p>
-          <p className="num text-2xl font-extrabold">{t.cortes}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm font-semibold text-carbon-900/50">{copy.kpis.promedio}</p>
-          <p className="num text-2xl font-extrabold">{formatPesos(t.promedio)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm font-semibold text-carbon-900/50">{copy.kpis.porDia}</p>
-          <p className="num text-2xl font-extrabold">{formatPesos(t.facturado / dias)}</p>
-        </div>
+        {periodo !== 'hoy' && serie.length > 1 && (
+          <div className="relative z-0 -mx-5 -mb-5 mt-3">
+            <AreaChart data={serie.map((p) => p.facturado)} destacado={idxMejor} alto={110} />
+          </div>
+        )}
       </div>
 
-      {(cortes ?? []).length === 0 ? (
-        <div className="card p-6 text-center text-sm text-carbon-900/50">{copy.vacio}</div>
+      {!hayDatos ? (
+        <div className="card flex flex-col items-center gap-2 p-8 text-center">
+          <span className="text-4xl">📊</span>
+          <p className="font-semibold">{copy.vacio.titulo}</p>
+          <p className="text-sm text-carbon-900/50">{copy.vacio.bajada}</p>
+        </div>
       ) : (
         <>
-          {/* Cortes por día */}
+          {/* KPI tiles */}
+          <div className="mb-4 grid grid-cols-3 gap-2.5">
+            <Kpi label={copy.kpis.cortes} valor={String(t.cortes)} />
+            <Kpi label={copy.kpis.promedio} valor={formatPesos(t.promedio)} />
+            <Kpi label={copy.kpis.porDia} valor={formatPesos(t.facturado / dias)} />
+          </div>
+
+          {/* Actividad por día (barras) */}
           {periodo !== 'hoy' && (
             <div className="card mb-4 p-4">
               <div className="mb-3 flex items-baseline justify-between">
-                <h3 className="font-bold">{copy.graficoDias}</h3>
+                <h3 className="font-bold">{copy.actividad}</h3>
                 {mejor && (
                   <span className="text-xs text-carbon-900/50">
-                    {copy.mejorDia}: <b>{formatFechaLarga(mejor.dia).split(' ')[0]}</b> ·{' '}
-                    {formatPesos(mejor.facturado)}
+                    {copy.kpis.mejorDia}:{' '}
+                    <b className="text-carbon-900">{formatFechaLarga(mejor.dia).split(' ').slice(0, 3).join(' ')}</b>
                   </span>
                 )}
               </div>
-              <GraficoBarras
-                barras={serie.map((p) => ({
-                  etiqueta: String(desdeClave(p.dia).getDate()),
-                  valor: p.cortes,
-                  destacada: mejor?.dia === p.dia,
-                }))}
-              />
+              <BarrasDia serie={serie} idxMejor={idxMejor} />
             </div>
           )}
 
-          {/* Medios de pago */}
-          <div className="card mb-4 p-4">
-            <h3 className="mb-3 font-bold">{copy.medios.titulo}</h3>
-            <div className="mb-2 flex h-3 overflow-hidden rounded-full bg-carbon-100">
-              <div
-                className="bg-ok"
-                style={{ width: `${t.facturado ? (t.efectivo / t.facturado) * 100 : 0}%` }}
-              />
-              <div className="flex-1 bg-confirmado" />
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>
-                <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok" />
-                {copy.medios.efectivo} <b className="num">{formatPesos(t.efectivo)}</b>
-              </span>
-              <span>
-                <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-confirmado" />
-                {copy.medios.transferencia} <b className="num">{formatPesos(t.transferencia)}</b>
-              </span>
+          {/* Medios de pago (donut) */}
+          <div className="card mb-4 flex items-center gap-5 p-4">
+            <Donut
+              tam={116}
+              segmentos={[
+                { valor: t.efectivo, color: '#0F9D58' },
+                { valor: t.transferencia, color: '#2E7DD1' },
+              ]}
+              centro={`${t.facturado ? Math.round((t.efectivo / t.facturado) * 100) : 0}%`}
+              sub="efectivo"
+            />
+            <div className="flex-1 space-y-3">
+              <h3 className="font-bold">{copy.medios.titulo}</h3>
+              <Leyenda color="#0F9D58" label={copy.medios.efectivo} monto={t.efectivo} />
+              <Leyenda color="#2E7DD1" label={copy.medios.transferencia} monto={t.transferencia} />
             </div>
           </div>
 
-          {/* Ranking de servicios */}
+          {/* Servicios más pedidos */}
           <div className="card mb-4 p-4">
             <h3 className="mb-3 font-bold">{copy.servicios}</h3>
-            <ul className="space-y-2.5">
-              {servicios.map((s) => (
+            <ul className="space-y-3">
+              {servs.map((s) => (
                 <li key={s.servicioNombre}>
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span className="font-semibold">{s.servicioNombre}</span>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-semibold">
+                      {emojiDe(s.servicioNombre)} {s.servicioNombre}
+                    </span>
                     <span className="num text-carbon-900/60">
-                      {s.cortes} · {formatPesos(s.facturado)}
+                      {s.cortes} · <b className="text-carbon-900">{formatPesos(s.facturado)}</b>
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-carbon-100">
+                  <div className="h-2.5 overflow-hidden rounded-full bg-carbon-100">
                     <div
-                      className="h-full rounded-full bg-oro"
-                      style={{ width: `${(s.facturado / (servicios[0]?.facturado || 1)) * 100}%` }}
+                      className="h-full rounded-full bg-gradient-to-r from-oro-dark to-oro"
+                      style={{ width: `${(s.facturado / (servs[0]?.facturado || 1)) * 100}%` }}
                     />
                   </div>
                 </li>
@@ -168,17 +179,24 @@ export function Stats({ config }: { config: Config }) {
 
           {/* Horas pico */}
           <div className="card mb-4 p-4">
-            <h3 className="mb-3 font-bold">{copy.horasPico}</h3>
-            <div className="flex items-end gap-1" style={{ height: 72 }}>
+            <div className="mb-3 flex items-baseline justify-between">
+              <h3 className="font-bold">{copy.horasPico}</h3>
+              {horaPico.cortes > 0 && (
+                <span className="num text-xs font-bold text-oro-dark">{horaPico.hora}:00 hs</span>
+              )}
+            </div>
+            <div className="flex items-end gap-1" style={{ height: 68 }}>
               {horas.map((h) => (
                 <div key={h.hora} className="flex flex-1 flex-col items-center gap-1">
                   <div
-                    className={`w-full rounded-t-md ${h.cortes === maxHora ? 'bg-oro' : 'bg-carbon/60'}`}
-                    style={{ height: Math.max((h.cortes / maxHora) * 50, h.cortes > 0 ? 3 : 1) }}
+                    className={`w-full rounded-t ${
+                      h.hora === horaPico.hora && h.cortes > 0
+                        ? 'bg-gradient-to-t from-oro-dark to-oro'
+                        : 'bg-carbon/25'
+                    }`}
+                    style={{ height: Math.max((h.cortes / maxHora) * 48, h.cortes > 0 ? 3 : 1) }}
                   />
-                  <span className="text-[9px] text-carbon-900/40">
-                    {h.hora % 3 === 0 ? h.hora : ''}
-                  </span>
+                  <span className="text-[9px] text-carbon-900/40">{h.hora % 3 === 0 ? h.hora : ''}</span>
                 </div>
               ))}
             </div>
@@ -186,5 +204,54 @@ export function Stats({ config }: { config: Config }) {
         </>
       )}
     </Pantalla>
+  );
+}
+
+function Kpi({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div className="card p-3.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">{label}</p>
+      <p className="num mt-1 text-xl font-extrabold leading-tight">{valor}</p>
+    </div>
+  );
+}
+
+function Leyenda({ color, label, monto }: { color: string; label: string; monto: number }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="flex items-center gap-2">
+        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+        {label}
+      </span>
+      <b className="num">{formatPesos(monto)}</b>
+    </div>
+  );
+}
+
+function BarrasDia({
+  serie,
+  idxMejor,
+}: {
+  serie: { dia: string; cortes: number; facturado: number }[];
+  idxMejor?: number;
+}) {
+  const max = Math.max(...serie.map((p) => p.facturado), 1);
+  const cadaCuanto = serie.length > 14 ? 5 : 1;
+  return (
+    <div className="flex items-end gap-1" style={{ height: 96 }}>
+      {serie.map((p, i) => (
+        <div key={p.dia} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+          <div
+            className={`w-full rounded-t-md ${
+              i === idxMejor ? 'bg-gradient-to-t from-oro-dark to-oro' : 'bg-carbon/75'
+            }`}
+            style={{ height: Math.max((p.facturado / max) * 74, p.facturado > 0 ? 4 : 1) }}
+          />
+          <span className="h-3.5 truncate text-[9px] text-carbon-900/40">
+            {i % cadaCuanto === 0 ? desdeClave(p.dia).getDate() : ''}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

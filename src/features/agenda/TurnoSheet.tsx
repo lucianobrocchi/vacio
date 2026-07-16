@@ -6,6 +6,7 @@ import { bloqueosDelDia } from '../../db/bloqueos';
 import { slotsLibres, horaDisponible } from '../../lib/agenda';
 import { claveDia, desdeClave, formatFechaLarga, horaAMin } from '../../lib/fecha';
 import { formatNumero } from '../../lib/format';
+import { syncCrearEvento, syncActualizarEvento } from '../../lib/syncGoogle';
 import { Sheet } from '../../components/Sheet';
 import { Campo } from '../../components/Campo';
 import type { Config, Turno } from '../../db/types';
@@ -19,11 +20,21 @@ interface Props {
   barberoUuid: string;
   /** Si viene, es edición. */
   turno?: Turno;
+  /** Hora tentativa (al tocar un slot de la grilla). */
+  horaInicial?: string;
 }
 
 const c = copy.turnoSheet;
 
-export function TurnoSheet({ abierto, onCerrar, config, dia, barberoUuid, turno }: Props) {
+export function TurnoSheet({
+  abierto,
+  onCerrar,
+  config,
+  dia,
+  barberoUuid,
+  turno,
+  horaInicial,
+}: Props) {
   const servicios = useLiveQuery(() => listarServicios(), []) ?? [];
   const turnos = useLiveQuery(() => turnosDelDia(dia, barberoUuid), [dia, barberoUuid]) ?? [];
   const bloqueos = useLiveQuery(() => bloqueosDelDia(dia, barberoUuid), [dia, barberoUuid]) ?? [];
@@ -83,9 +94,11 @@ export function TurnoSheet({ abierto, onCerrar, config, dia, barberoUuid, turno 
     return libres;
   }, [servicioElegido, dia, config, turnos, bloqueos, turno]);
 
-  // Si el servicio cambió y la hora elegida ya no sirve, deselecciona.
+  // Si el servicio cambió: deselecciona la hora inválida, o autoselecciona
+  // la hora tentativa (el slot que tocaste en la grilla) si quedó libre.
   useEffect(() => {
     if (hora && !horasLibres.includes(hora)) setHora('');
+    else if (!hora && horaInicial && horasLibres.includes(horaInicial)) setHora(horaInicial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horasLibres]);
 
@@ -109,8 +122,13 @@ export function TurnoSheet({ abierto, onCerrar, config, dia, barberoUuid, turno 
       clienteEmail: clienteEmail.trim() || undefined,
       nota: nota.trim() || undefined,
     };
-    if (turno) await actualizarTurno(turno.uuid, datos);
-    else await crearTurno({ ...datos, origen: 'barbero' });
+    if (turno) {
+      await actualizarTurno(turno.uuid, datos);
+      await syncActualizarEvento(config, { ...turno, ...datos });
+    } else {
+      const nuevoUuid = await crearTurno({ ...datos, origen: 'barbero' });
+      await syncCrearEvento(config, nuevoUuid);
+    }
     onCerrar();
   }
 

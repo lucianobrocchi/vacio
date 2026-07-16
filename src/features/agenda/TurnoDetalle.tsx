@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cambiarEstadoTurno, marcarTurnoHecho, borrarTurno } from '../../db/turnos';
+import { syncCrearEvento, syncBorrarEvento } from '../../lib/syncGoogle';
 import {
   linkWhatsApp,
   linkEmail,
@@ -17,14 +18,14 @@ import {
   IconoTacho,
   IconoWhatsApp,
 } from '../../components/Iconos';
-import type { MedioPago, Turno } from '../../db/types';
+import type { Config, MedioPago, Turno } from '../../db/types';
 import { copy } from './agenda.copy';
 
 interface Props {
   turno: Turno | null;
   onCerrar: () => void;
   onEditar: (turno: Turno) => void;
-  nombreBarberia: string;
+  config: Config;
 }
 
 const c = copy.detalle;
@@ -36,12 +37,13 @@ const COLORES_ESTADO: Record<string, string> = {
   cancelado: 'bg-cancelado/20 text-carbon-900/50',
 };
 
-export function TurnoDetalle({ turno, onCerrar, onEditar, nombreBarberia }: Props) {
+export function TurnoDetalle({ turno, onCerrar, onEditar, config }: Props) {
   const [eligiendoPago, setEligiendoPago] = useState(false);
 
   if (!turno) return null;
   // Alias const: mantiene el narrowing dentro de los closures del JSX.
   const t = turno;
+  const nombreBarberia = config.nombreBarberia;
 
   async function hecho(medioPago: MedioPago) {
     await marcarTurnoHecho(t, medioPago);
@@ -49,13 +51,23 @@ export function TurnoDetalle({ turno, onCerrar, onEditar, nombreBarberia }: Prop
     onCerrar();
   }
 
+  async function confirmar() {
+    await cambiarEstadoTurno(t.uuid, 'confirmado');
+    // Al confirmar, recién ahí creamos el evento en Google (los turnos del
+    // cliente nacen pendientes en el teléfono del barbero).
+    await syncCrearEvento(config, t.uuid);
+    onCerrar();
+  }
+
   async function cancelar() {
+    await syncBorrarEvento(config, t);
     await cambiarEstadoTurno(t.uuid, 'cancelado');
     onCerrar();
   }
 
   async function borrar() {
     if (!window.confirm(c.confirmarBorrar)) return;
+    await syncBorrarEvento(config, t);
     await borrarTurno(t.uuid);
     onCerrar();
   }
@@ -128,11 +140,7 @@ export function TurnoDetalle({ turno, onCerrar, onEditar, nombreBarberia }: Prop
 
         {/* Acciones sobre el turno */}
         {t.estado === 'pendiente' && (
-          <button
-            type="button"
-            className="btn-secundario py-3 text-base"
-            onClick={() => cambiarEstadoTurno(t.uuid, 'confirmado')}
-          >
+          <button type="button" className="btn-secundario py-3 text-base" onClick={confirmar}>
             <IconoCheck width={20} height={20} />
             {c.confirmar}
           </button>

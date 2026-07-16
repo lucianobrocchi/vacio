@@ -7,8 +7,8 @@ import type { Barbero, Bloqueo, Corte, MedioPago, Servicio, Turno } from './type
 // para ver la app llena sin cargar nada. Se saca con "Empezar de cero".
 
 const BARBEROS_DEMO = [
-  { nombre: 'Nico', emoji: '💈' },
-  { nombre: 'Tomi', emoji: '⚡' },
+  { nombre: 'Nico', emoji: '💈', comision: 60 },
+  { nombre: 'Tomi', emoji: '⚡', comision: 50 },
 ];
 
 const SERVICIOS_DEMO = [
@@ -51,6 +51,7 @@ export async function cargarDatosDemo(barberoExistenteUuid?: string): Promise<vo
     uuid: uuid(),
     nombre: b.nombre,
     emoji: b.emoji,
+    comision: b.comision,
     orden: cantidadActual + i + 1,
     activo: 1 as const,
     updatedAt: ahora,
