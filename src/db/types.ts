@@ -113,5 +113,11 @@ export interface Config {
   googleClientId?: string;
   /** Email donde recibir el feedback (fallback si no hay webhook). */
   feedbackEmail?: string;
+  /** Código de licencia/membresía activado en este dispositivo. */
+  licenciaCodigo?: string;
+  /** Último estado conocido de la licencia (activa | suspendida | vencida). */
+  licenciaEstado?: string;
+  /** Timestamp del último respaldo en la nube. */
+  ultimoRespaldoEn?: number;
   onboardingCompletado: boolean;
 }

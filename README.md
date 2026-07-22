@@ -21,6 +21,8 @@ Marca: **Carbón `#221F1A`** + **Oro `#C79A3B`**, tipografías **Cabinet Grotesk
 | **Reservas públicas** | Página `#/reservar` para el cliente: servicio → barbero → día/hora libre → datos → confirmación. Respeta horario, turnos ocupados y bloqueos | ✅ Hecho y verificado |
 | **Stats (premium)** | Dashboard por **hoy / semana / mes**: hero con facturado + tendencia (área con degradado) y comparativa, KPIs (cortes, ticket promedio, promedio/día), actividad por día, medios de pago (donut), servicios más pedidos, horas pico | ✅ Hecho y verificado |
 | **Barbería (dueño)** | Panel aparte: facturado del local, **comisiones a pagar y neto de la barbería**, detalle **por barbero** (facturado · comisión % · neto), turnos de hoy de todo el equipo | ✅ Hecho y verificado |
+| **Clientes (cartera)** | Sección que se arma sola desde cortes + turnos: frecuencia de visita, última vez, gasto y estado (frecuente / en riesgo / nuevo). Búsqueda, filtros, heatmap de visitas y WhatsApp de reenganche | ✅ Hecho y verificado |
+| **Venta: membresías + respaldo + admin** | Códigos de licencia que activás/revocás; **respaldo en la nube** de cada barbería (Supabase); panel `#/admin` para ver todas las barberías, su uso y cortarles el acceso | ✅ Hecho (requiere configurar Supabase) |
 | **Asistente IA + Feedback** | Burbuja flotante con **chat IA** (función serverless → API de Claude, con la key segura en el server) que ayuda a usar la app y responde sobre tus números, y una solapa de **feedback**. Fallbacks: FAQ local sin API key, mail si no hay webhook | ✅ Hecho y verificado |
 | **Ajustes** | Barberos (+ **% de comisión**), servicios y precios, **horario semanal**, **conectar Google Calendar** (Client ID + pasos), link de reservas (copiar), datos de demo, empezar de cero | ✅ Hecho y verificado |
 | **Backend (sync entre dispositivos + envío programado)** | Supabase (auth + sync), para que las reservas del cliente entren desde su teléfono y el recordatorio se mande solo | ⏳ Fase 2 |
@@ -56,6 +58,33 @@ Variables de entorno en **Vercel → proyecto vacio → Settings → Environment
 
 La API key **solo vive en el server** (nunca en el navegador). El asistente puede usar un resumen de
 tus números (facturado/servicios del período) para responder preguntas sobre el negocio.
+
+### Venta: membresías, respaldo en la nube y panel admin (Supabase)
+
+Para darle la app a muchas barberías, controlar el acceso y que **los datos queden guardados**:
+
+1. Creá un proyecto gratis en [supabase.com](https://supabase.com).
+2. SQL Editor → pegá y ejecutá `supabase/schema.sql` (crea `licencias` y `respaldos`).
+3. En **Vercel → Settings → Environment Variables** cargá:
+
+| Variable | Para qué |
+|---|---|
+| `SUPABASE_URL` | URL del proyecto (Settings → API). |
+| `SUPABASE_SERVICE_KEY` | **service_role key** (Settings → API). Solo vive en el server. |
+| `ADMIN_TOKEN` | Una clave tuya para entrar al panel admin. |
+
+**Redeploy** y listo. Cómo funciona:
+
+- **Panel admin** en `tu-dominio/#/admin` (entrás con `ADMIN_TOKEN`): creás códigos por barbería,
+  ves **quién la usa** (último uso, cortes) y **pausás/reactivás** el acceso cuando quieras.
+- Cada barbería **activa la app con su código** (una vez) y desde ahí sus datos se **respaldan solos**
+  en la nube. Con el mismo código restaura todo en otro teléfono (Ajustes → Respaldo en la nube).
+- Si pausás una licencia, esa barbería queda **bloqueada** (sus datos siguen guardados).
+- **Sin Supabase configurado, la app corre igual en modo local libre** (sin códigos ni bloqueos) —
+  ideal para desarrollo y demo.
+
+> Nota: hoy el respaldo es una copia completa a la nube (recuperable desde otro dispositivo). El
+> **sync multi-dispositivo en tiempo real** (dos teléfonos editando a la vez) es el próximo paso.
 
 ---
 

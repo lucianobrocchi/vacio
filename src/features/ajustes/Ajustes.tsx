@@ -21,9 +21,10 @@ import {
   desactivarServicio,
 } from '../../db/servicios';
 import { cargarDatosDemo, borrarTodo } from '../../db/demo';
+import { respaldarAhora, restaurarDesdeNube } from '../../lib/nube';
 import { linkReservas } from '../../lib/mensajes';
 import { formatNumero, parsePesos } from '../../lib/format';
-import { NOMBRES_DIAS, horaAMin, minAHora } from '../../lib/fecha';
+import { NOMBRES_DIAS, horaAMin, minAHora, formatFecha } from '../../lib/fecha';
 import { Pantalla } from '../../components/Pantalla';
 import { Sheet } from '../../components/Sheet';
 import { Campo } from '../../components/Campo';
@@ -226,6 +227,10 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
         <p className="text-xs text-carbon-900/45">{copy.reservas.aviso}</p>
       </div>
 
+      {/* Respaldo en la nube */}
+      <h3 className={tituloSeccion}>{copy.nube.titulo}</h3>
+      <RespaldoSection config={config} />
+
       {/* Google Calendar */}
       <h3 className={tituloSeccion}>{copy.google.titulo}</h3>
       <GoogleSection config={config} />
@@ -331,6 +336,75 @@ function FilaHorario({ dia, config }: { dia: number; config: Config }) {
           {h.cerrado ? copy.horario.cerrado : 'Abierto'}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Respaldo en la nube + membresía. */
+function RespaldoSection({ config }: { config: Config }) {
+  const n = copy.nube;
+  const codigo = config.licenciaCodigo;
+  const [estado, setEstado] = useState<'idle' | 'respaldando' | 'restaurando' | 'ok' | 'error'>('idle');
+
+  if (!codigo) {
+    return <div className="card p-4 text-sm text-carbon-900/55">{n.sinCloud}</div>;
+  }
+
+  async function respaldar() {
+    setEstado('respaldando');
+    const r = await respaldarAhora(codigo!);
+    setEstado(r.ok ? 'ok' : 'error');
+    setTimeout(() => setEstado('idle'), 3500);
+  }
+
+  async function restaurar() {
+    if (!window.confirm(n.confirmarRestaurar)) return;
+    setEstado('restaurando');
+    const r = await restaurarDesdeNube(codigo!);
+    if (r.ok) location.reload();
+    else {
+      setEstado('error');
+      setTimeout(() => setEstado('idle'), 3500);
+    }
+  }
+
+  return (
+    <div className="card space-y-3 p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">{n.codigo}</p>
+          <p className="num text-sm font-bold">{codigo}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
+            {n.ultimoRespaldo}
+          </p>
+          <p className="text-sm font-semibold">
+            {config.ultimoRespaldoEn ? formatFecha(config.ultimoRespaldoEn) : n.nunca}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className="btn-primario py-3 text-base"
+          disabled={estado === 'respaldando'}
+          onClick={respaldar}
+        >
+          {estado === 'respaldando' ? n.respaldando : n.respaldar}
+        </button>
+        <button
+          type="button"
+          className="btn-secundario py-3 text-base"
+          disabled={estado === 'restaurando'}
+          onClick={restaurar}
+        >
+          {estado === 'restaurando' ? n.restaurando : n.restaurar}
+        </button>
+      </div>
+      {estado === 'ok' && <p className="text-center text-sm font-semibold text-ok">{n.respaldado}</p>}
+      {estado === 'error' && <p className="text-center text-sm font-semibold text-rojo">{n.error}</p>}
+      <p className="text-xs text-carbon-900/45">{n.ayuda}</p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { obtenerConfig } from './db/config';
+import { obtenerConfig, actualizarConfig } from './db/config';
+import { chequearLicencia, respaldarAhora, type EstadoNube } from './lib/nube';
 import { BottomNav, type Tab } from './components/BottomNav';
 import { AbrirAjustesContext } from './components/contexto';
 import { Logo } from './components/Logo';
@@ -12,10 +13,12 @@ import { Stats } from './features/stats/Stats';
 import { Barberia } from './features/duenio/Barberia';
 import { Ajustes } from './features/ajustes/Ajustes';
 import { Reservar } from './features/reservar/Reservar';
+import { Membresia } from './features/nube/Membresia';
+import { Admin } from './features/admin/Admin';
 import { AsistenteBurbuja } from './components/AsistenteBurbuja';
 import type { Config } from './db/types';
 
-/** Ruta por hash: "#/reservar" (cliente) y "#/admin" (panel del dueño de la app). */
+/** Ruta por hash: "#/reservar" (cliente) y "#/admin" (dueño de la app). */
 function useHashRoute(): string {
   const [hash, setHash] = useState(location.hash);
   useEffect(() => {
@@ -29,12 +32,47 @@ function useHashRoute(): string {
 export default function App() {
   const config = useLiveQuery(() => obtenerConfig());
   const hash = useHashRoute();
+  const [licencia, setLicencia] = useState<EstadoNube | null>(null);
+  const [desbloqueada, setDesbloqueada] = useState(false);
 
-  // Página pública de reservas: sin nav, pensada para el cliente. No depende de config.
+  const listo = config !== undefined;
+  const codigo = config?.licenciaCodigo;
+
+  // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
+  useEffect(() => {
+    if (!listo) return;
+    let cancel = false;
+    const check = async () => {
+      const e = await chequearLicencia(codigo);
+      if (cancel) return;
+      setLicencia(e);
+      if (e.estado) actualizarConfig({ licenciaEstado: e.estado });
+    };
+    check();
+    const id = setInterval(check, 10 * 60 * 1000);
+    return () => {
+      cancel = true;
+      clearInterval(id);
+    };
+  }, [listo, codigo]);
+
+  // Auto-respaldo en la nube cuando la licencia está activa.
+  useEffect(() => {
+    if (!licencia?.activada || !codigo) return;
+    respaldarAhora(codigo);
+    const id = setInterval(() => respaldarAhora(codigo), 20 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [licencia?.activada, codigo]);
+
+  // Página pública de reservas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;
+  if (hash.startsWith('#/admin')) return <Admin />;
 
-  // Cargando la config (un instante, ya viene seedeada desde main.tsx).
   if (config === undefined) return <Splash />;
+
+  // Gate de membresía: solo si la nube está activa y este equipo no tiene licencia válida.
+  const bloqueado = !!licencia?.cloud && !licencia.activada && !desbloqueada;
+  if (bloqueado) return <Membresia estado={licencia!} onActiva={() => setDesbloqueada(true)} />;
 
   if (!config.onboardingCompletado) return <Onboarding />;
 
@@ -45,7 +83,6 @@ function AppShell({ config }: { config: Config }) {
   const [tab, setTab] = useState<Tab>('fichar');
   const [ajustesAbierto, setAjustesAbierto] = useState(false);
 
-  // Ajustes se abre desde el engranaje del header (sub-página a pantalla completa).
   if (ajustesAbierto) {
     return (
       <div className="min-h-full">

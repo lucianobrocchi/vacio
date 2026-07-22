@@ -87,6 +87,22 @@ export const copy = {
     ] as string[],
     dominioActual: 'El dominio de esta app es:',
   },
+  nube: {
+    titulo: 'Respaldo en la nube',
+    sinCloud: 'El respaldo en la nube todavía no está habilitado para tu cuenta.',
+    codigo: 'Tu membresía',
+    ultimoRespaldo: 'Último respaldo',
+    nunca: 'todavía no',
+    respaldar: 'Respaldar ahora',
+    respaldando: 'Respaldando…',
+    respaldado: '¡Respaldado! ✓',
+    restaurar: 'Restaurar de la nube',
+    restaurando: 'Restaurando…',
+    confirmarRestaurar:
+      'Esto reemplaza los datos de ESTE dispositivo con el último respaldo de la nube. ¿Seguir?',
+    error: 'No se pudo. Revisá la conexión.',
+    ayuda: 'Tus datos se guardan solos cuando usás la app. Con tu código los recuperás en otro teléfono.',
+  },
   datos: {
     titulo: 'Datos',
     demo: 'Cargar datos de demo',
