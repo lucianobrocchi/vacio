@@ -106,6 +106,60 @@
     animation: pop-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  /* Animaciones de dashboard */
+  @keyframes grow-y {
+    from {
+      transform: scaleY(0);
+    }
+  }
+  .anim-barra {
+    transform-origin: bottom;
+    animation: grow-y 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes trazo {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .anim-trazo {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trazo 1s ease-out 0.1s forwards;
+  }
+  .anim-despues {
+    opacity: 0;
+    animation: fade-in 0.6s ease-out 0.55s forwards;
+  }
+  @keyframes subir {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .anim-subir {
+    animation: subir 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .anim-barra,
+    .anim-trazo,
+    .anim-despues,
+    .anim-subir {
+      animation: none;
+      opacity: 1;
+      stroke-dashoffset: 0;
+      transform: none;
+    }
+  }
+
   /* Scroll horizontal sin barra visible (tira de días, chips). */
   .sin-scrollbar {
     scrollbar-width: none;

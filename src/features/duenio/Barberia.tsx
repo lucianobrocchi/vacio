@@ -7,7 +7,10 @@ import { totales, variacion, porBarbero } from '../../lib/stats';
 import { rangoPeriodo, rangoAnterior, claveDia } from '../../lib/fecha';
 import { formatPesos } from '../../lib/format';
 import { Pantalla } from '../../components/Pantalla';
-import type { Config } from '../../db/types';
+import { NumeroAnimado } from '../../components/NumeroAnimado';
+import { IconoFlechaDer } from '../../components/Iconos';
+import { BarberoDetalle } from './BarberoDetalle';
+import type { Barbero, Config } from '../../db/types';
 import { copy } from './duenio.copy';
 
 type Periodo = 'hoy' | 'semana' | 'mes';
@@ -15,6 +18,7 @@ type Periodo = 'hoy' | 'semana' | 'mes';
 /** Panel del dueño: facturado, comisiones y neto de la barbería. */
 export function Barberia({ config }: { config: Config }) {
   const [periodo, setPeriodo] = useState<Periodo>('semana');
+  const [detalle, setDetalle] = useState<Barbero | null>(null);
 
   const barberos = useLiveQuery(() => listarBarberos(true), []) ?? [];
   const [desde, hasta] = rangoPeriodo(periodo);
@@ -80,7 +84,9 @@ export function Barberia({ config }: { config: Config }) {
             </span>
           )}
         </div>
-        <p className="num mt-1 text-[2.6rem] font-extrabold leading-none">{formatPesos(t.facturado)}</p>
+        <p className="mt-1 text-[2.6rem] font-extrabold leading-none">
+          <NumeroAnimado valor={t.facturado} duracion={900} />
+        </p>
         <p className="num mt-1 text-sm text-white/60">
           {t.cortes} {copy.resumen.cortes.toLowerCase()}
         </p>
@@ -88,17 +94,21 @@ export function Barberia({ config }: { config: Config }) {
 
       {/* Comisiones vs neto */}
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="card p-4">
+        <div className="card anim-subir p-4" style={{ animationDelay: '60ms' }}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
             {copy.resumen.comisiones}
           </p>
-          <p className="num mt-1 text-2xl font-extrabold text-oro-dark">{formatPesos(comisionesTotal)}</p>
+          <p className="mt-1 text-2xl font-extrabold text-oro-dark">
+            <NumeroAnimado valor={comisionesTotal} />
+          </p>
         </div>
-        <div className="card p-4">
+        <div className="card anim-subir p-4" style={{ animationDelay: '120ms' }}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
             {copy.resumen.neto}
           </p>
-          <p className="num mt-1 text-2xl font-extrabold text-ok">{formatPesos(netoLocal)}</p>
+          <p className="mt-1 text-2xl font-extrabold text-ok">
+            <NumeroAnimado valor={netoLocal} />
+          </p>
         </div>
       </div>
 
@@ -109,25 +119,41 @@ export function Barberia({ config }: { config: Config }) {
           <p className="py-3 text-sm text-carbon-900/50">{copy.vacio}</p>
         ) : (
           <ul className="divide-y divide-carbon/5">
-            {filas.map((f) => (
-              <li key={f.barberoUuid} className="py-3">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="font-semibold">{nombreDe(f.barberoUuid)}</span>
-                  <span className="rounded-full bg-carbon-100 px-2 py-0.5 text-[11px] font-bold text-carbon-900/60">
-                    {f.pct}% · {f.cortes} cortes
-                  </span>
-                </div>
-                <div className="mb-2 h-2 overflow-hidden rounded-full bg-carbon-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-oro-dark to-oro"
-                    style={{ width: `${(f.facturado / maxFact) * 100}%` }}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-1 text-center">
-                  <Celda label={copy.col.factura} valor={formatPesos(f.facturado)} />
-                  <Celda label={copy.col.comision} valor={formatPesos(f.comision)} tono="text-oro-dark" />
-                  <Celda label={copy.col.neto} valor={formatPesos(f.neto)} tono="text-ok" />
-                </div>
+            {filas.map((f, i) => (
+              <li key={f.barberoUuid} className="anim-subir" style={{ animationDelay: `${150 + i * 70}ms` }}>
+                <button
+                  type="button"
+                  className="w-full py-3 text-left transition active:scale-[0.995]"
+                  onClick={() => {
+                    const b = barberoDe(f.barberoUuid);
+                    if (b) setDetalle(b);
+                  }}
+                >
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1 font-semibold">
+                      {nombreDe(f.barberoUuid)}
+                      <IconoFlechaDer width={15} height={15} className="text-carbon-900/30" />
+                    </span>
+                    <span className="rounded-full bg-carbon-100 px-2 py-0.5 text-[11px] font-bold text-carbon-900/60">
+                      {f.pct}% · {f.cortes} cortes
+                    </span>
+                  </div>
+                  <div className="mb-2 h-2 overflow-hidden rounded-full bg-carbon-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-oro-dark to-oro"
+                      style={{
+                        width: `${(f.facturado / maxFact) * 100}%`,
+                        transformOrigin: 'left',
+                        animation: `grow-x 0.7s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.1}s both`,
+                      }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-center">
+                    <Celda label={copy.col.factura} valor={formatPesos(f.facturado)} />
+                    <Celda label={copy.col.comision} valor={formatPesos(f.comision)} tono="text-oro-dark" />
+                    <Celda label={copy.col.neto} valor={formatPesos(f.neto)} tono="text-ok" />
+                  </div>
+                </button>
               </li>
             ))}
           </ul>
@@ -154,6 +180,16 @@ export function Barberia({ config }: { config: Config }) {
           </ul>
         )}
       </div>
+
+      {detalle && (
+        <BarberoDetalle
+          barbero={detalle}
+          desde={desde}
+          hasta={hasta}
+          etiquetaPeriodo={copy.periodos[periodo]}
+          onCerrar={() => setDetalle(null)}
+        />
+      )}
     </Pantalla>
   );
 }

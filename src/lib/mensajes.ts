@@ -48,6 +48,14 @@ export function mensajeRecordatorio(turno: Turno, nombreBarberia: string): strin
   );
 }
 
+/** Mensaje de reenganche para clientes que hace mucho no vienen. */
+export function mensajeReenganche(nombreCliente: string, nombreBarberia: string): string {
+  return (
+    `¡Hola ${nombreCliente}! ¿Cómo va? Hace un tiempito que no pasás por ${nombreBarberia} ✂️\n` +
+    `Cuando quieras te guardo un turno. ¡Te esperamos!`
+  );
+}
+
 export function asuntoEmail(turno: Turno, nombreBarberia: string): string {
   return `Turno confirmado en ${nombreBarberia} — ${formatFechaLarga(turno.dia)} ${turno.hora} hs`;
 }

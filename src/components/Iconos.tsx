@@ -195,3 +195,30 @@ export function IconoPersona(props: Props) {
     </svg>
   );
 }
+
+export function IconoFlechaIzq(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+export function IconoFlechaDer(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/** Dos personas — Clientes (cartera). */
+export function IconoClientes(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="9" cy="8.5" r="3.5" fill={props.filled ? 'currentColor' : 'none'} />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 5.6a3.5 3.5 0 0 1 0 5.8M17.8 14.1a6.5 6.5 0 0 1 3.7 5.9" />
+    </svg>
+  );
+}

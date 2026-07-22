@@ -14,6 +14,17 @@ import { timestampDe } from './fecha';
 import { formatPesos } from './format';
 import type { Turno } from '../db/types';
 
+/**
+ * Client ID efectivo: el de la app (VITE_GOOGLE_CLIENT_ID, lo configura el
+ * administrador UNA vez en Vercel y vale para todas las barberías) o, si
+ * alguien cargó uno propio en Ajustes → avanzado, ese.
+ */
+export function clientIdEfectivo(config?: { googleClientId?: string }): string {
+  const propio = config?.googleClientId?.trim();
+  const compartido = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  return propio || compartido || '';
+}
+
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';

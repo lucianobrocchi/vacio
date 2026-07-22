@@ -54,10 +54,19 @@ export function AreaChart({ data, destacado, alto = 120, color = '#C79A3B' }: Pr
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={area} fill={`url(#fill-${id})`} />
-      <path d={d} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={area} fill={`url(#fill-${id})`} className="anim-despues" />
+      <path
+        d={d}
+        pathLength={1}
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="anim-trazo"
+      />
       {destacado != null && data[destacado] != null && (
-        <g>
+        <g className="anim-despues">
           <circle cx={x(destacado)} cy={y(data[destacado])} r="7" fill={color} fillOpacity="0.25" />
           <circle cx={x(destacado)} cy={y(data[destacado])} r="3.5" fill={color} />
         </g>

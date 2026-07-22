@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 interface Segmento {
   valor: number;
   color: string;
@@ -12,35 +14,45 @@ interface Props {
   tam?: number;
 }
 
-/** Donut chart (anillo) con segmentos. SVG puro. */
+/** Donut chart (anillo) con segmentos, animado al montar. SVG puro. */
 export function Donut({ segmentos, centro, sub, tam = 128 }: Props) {
   const total = segmentos.reduce((a, s) => a + s.valor, 0) || 1;
   const r = 54;
-  const circ = 2 * Math.PI * r;
+
+  // Anima de 0 al valor real un frame después de montar (transition CSS).
+  const [listo, setListo] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setListo(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   let offset = 0;
 
   return (
-    <div className="relative" style={{ width: tam, height: tam }}>
+    <div className="relative shrink-0" style={{ width: tam, height: tam }}>
       <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
         <circle cx="64" cy="64" r={r} fill="none" stroke="#EAE5DC" strokeWidth="16" />
         {segmentos.map((s, i) => {
           const frac = s.valor / total;
-          const dash = frac * circ;
+          // pathLength=100: los dasharray quedan en base 100, fácil de animar.
+          const dash = listo ? frac * 100 : 0;
           const el = (
             <circle
               key={i}
               cx="64"
               cy="64"
               r={r}
+              pathLength={100}
               fill="none"
               stroke={s.color}
               strokeWidth="16"
-              strokeDasharray={`${dash} ${circ - dash}`}
+              strokeDasharray={`${dash} ${100 - dash}`}
               strokeDashoffset={-offset}
               strokeLinecap="butt"
+              style={{ transition: 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1)' }}
             />
           );
-          offset += dash;
+          offset += frac * 100;
           return el;
         })}
       </svg>

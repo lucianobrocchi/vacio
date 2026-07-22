@@ -65,9 +65,12 @@ export const copy = {
       'Conectá tu Google Calendar y cada turno se agenda ahí solo. Google le manda la invitación y los recordatorios al cliente y a vos.',
     conectado: 'Conectado ✓',
     desconectado: 'Sin conectar',
-    conectar: 'Conectar Google Calendar',
+    conectar: 'Conectar con Google',
     reconectar: 'Reconectar',
     desconectar: 'Desconectar',
+    avanzado: 'Usar mi propia cuenta de Google (avanzado)',
+    faltaConfig:
+      'La conexión directa todavía no está habilitada. Mientras tanto, cada turno tiene el botón "Agregar a Google Calendar".',
     clientId: 'Google OAuth Client ID',
     clientIdPlaceholder: '123...apps.googleusercontent.com',
     faltaClientId: 'Primero pegá tu Client ID de Google (ver abajo).',

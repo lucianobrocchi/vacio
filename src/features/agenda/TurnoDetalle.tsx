@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cambiarEstadoTurno, marcarTurnoHecho, borrarTurno } from '../../db/turnos';
 import { syncCrearEvento, syncBorrarEvento } from '../../lib/syncGoogle';
+import { linkAgregarAGoogle } from '../../lib/googleCalendar';
 import {
   linkWhatsApp,
   linkEmail,
@@ -12,6 +13,7 @@ import { formatFechaLarga } from '../../lib/fecha';
 import { formatPesos } from '../../lib/format';
 import { Sheet } from '../../components/Sheet';
 import {
+  IconoCalendario,
   IconoCheck,
   IconoLapiz,
   IconoMail,
@@ -135,6 +137,18 @@ export function TurnoDetalle({ turno, onCerrar, onEditar, config }: Props) {
           >
             <IconoMail width={20} height={20} />
             {c.email}
+          </a>
+        )}
+        {/* Fallback: si el turno no está sincronizado, ofrecer agregarlo a mano */}
+        {activo && !t.googleEventId && (
+          <a
+            href={linkAgregarAGoogle(t, nombreBarberia)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 py-2 text-sm font-semibold text-carbon-900/55"
+          >
+            <IconoCalendario width={17} height={17} />
+            {c.agregarGoogle}
           </a>
         )}
 

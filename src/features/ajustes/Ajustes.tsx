@@ -8,7 +8,12 @@ import {
   desactivarBarbero,
   COMISION_DEFAULT,
 } from '../../db/barberos';
-import { conectarGoogle, desconectarGoogle, googleConectado } from '../../lib/googleCalendar';
+import {
+  conectarGoogle,
+  desconectarGoogle,
+  googleConectado,
+  clientIdEfectivo,
+} from '../../lib/googleCalendar';
 import {
   listarServicios,
   crearServicio,
@@ -33,7 +38,7 @@ import {
 import type { Barbero, Config, Servicio } from '../../db/types';
 import { copy } from './ajustes.copy';
 
-export function Ajustes({ config }: { config: Config }) {
+export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () => void }) {
   const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
   const servicios = useLiveQuery(() => listarServicios(), []) ?? [];
 
@@ -74,7 +79,7 @@ export function Ajustes({ config }: { config: Config }) {
   const tituloSeccion = 'mb-2 mt-6 text-sm font-bold uppercase tracking-wide text-carbon-900/40';
 
   return (
-    <Pantalla titulo={copy.titulo}>
+    <Pantalla titulo={copy.titulo} volver={onCerrar}>
       {/* Barbería */}
       <h3 className={tituloSeccion}>{copy.barberia.titulo}</h3>
       <div className="card space-y-4 p-4">
@@ -336,15 +341,17 @@ function GoogleSection({ config }: { config: Config }) {
   const [clientId, setClientId] = useState(config.googleClientId ?? '');
   const [conectado, setConectado] = useState(googleConectado());
   const [estado, setEstado] = useState<'idle' | 'conectando' | 'error'>('idle');
-  const [ayuda, setAyuda] = useState(false);
+  const [avanzado, setAvanzado] = useState(false);
+
+  // Client ID efectivo: el compartido de la app (env) o el propio del barbero.
+  const idEfectivo = clientIdEfectivo(config);
+  const listo = !!idEfectivo;
 
   async function conectar() {
-    const id = clientId.trim();
-    if (!id) return;
-    await actualizarConfig({ googleClientId: id });
+    if (!idEfectivo) return;
     setEstado('conectando');
     try {
-      await conectarGoogle(id);
+      await conectarGoogle(idEfectivo);
       setConectado(true);
       setEstado('idle');
     } catch {
@@ -370,50 +377,53 @@ function GoogleSection({ config }: { config: Config }) {
         {conectado ? g.conectado : g.desconectado}
       </span>
 
-      <Campo label={g.clientId}>
-        <input
-          className="input-texto text-sm"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          onBlur={() => actualizarConfig({ googleClientId: clientId.trim() || undefined })}
-          placeholder={g.clientIdPlaceholder}
-        />
-      </Campo>
-
-      {!conectado ? (
-        <button
-          type="button"
-          className="btn-primario py-3 text-base"
-          disabled={!clientId.trim() || estado === 'conectando'}
-          onClick={conectar}
-        >
-          <IconoCalendario width={20} height={20} />
-          {estado === 'conectando' ? g.conectando : g.conectar}
-        </button>
+      {listo ? (
+        !conectado ? (
+          <button
+            type="button"
+            className="btn-primario py-3 text-base"
+            disabled={estado === 'conectando'}
+            onClick={conectar}
+          >
+            <IconoCalendario width={20} height={20} />
+            {estado === 'conectando' ? g.conectando : g.conectar}
+          </button>
+        ) : (
+          <button type="button" className="btn-secundario py-3 text-base" onClick={desconectar}>
+            {g.desconectar}
+          </button>
+        )
       ) : (
-        <button type="button" className="btn-secundario py-3 text-base" onClick={desconectar}>
-          {g.desconectar}
-        </button>
+        <p className="text-sm text-carbon-900/55">{g.faltaConfig}</p>
       )}
 
       {estado === 'error' && <p className="text-sm font-semibold text-rojo">{g.error}</p>}
-      {!clientId.trim() && <p className="text-xs text-carbon-900/45">{g.faltaClientId}</p>}
 
+      {/* Avanzado: usar una cuenta de Google propia (Client ID propio) */}
       <button
         type="button"
-        className="text-left text-sm font-semibold text-carbon-900/60"
-        onClick={() => setAyuda(!ayuda)}
+        className="text-left text-sm font-semibold text-carbon-900/50"
+        onClick={() => setAvanzado(!avanzado)}
       >
-        {ayuda ? '▲' : '▼'} {g.ayudaTitulo}
+        {avanzado ? '▲' : '▼'} {g.avanzado}
       </button>
-      {ayuda && (
-        <div className="rounded-xl bg-carbon-50 p-3 text-xs text-carbon-900/70">
-          <ol className="list-decimal space-y-1 pl-4">
+      {avanzado && (
+        <div className="space-y-3 rounded-xl bg-carbon-50 p-3">
+          <Campo label={g.clientId}>
+            <input
+              className="input-texto text-sm"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              onBlur={() => actualizarConfig({ googleClientId: clientId.trim() || undefined })}
+              placeholder={g.clientIdPlaceholder}
+            />
+          </Campo>
+          <ol className="list-decimal space-y-1 pl-4 text-xs text-carbon-900/70">
             {g.pasos.map((p) => (
               <li key={p}>{p}</li>
             ))}
           </ol>
-          <p className="mt-2 break-all">
+          <p className="break-all text-xs text-carbon-900/70">
             <b>{g.dominioActual}</b>
             <br />
             {location.origin}

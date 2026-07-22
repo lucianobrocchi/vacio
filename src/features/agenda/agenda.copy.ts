@@ -49,6 +49,7 @@ export const copy = {
     titulo: 'Turno',
     whatsapp: 'Confirmar por WhatsApp',
     recordatorio: 'Mandar recordatorio',
+    agregarGoogle: 'Agregar a Google Calendar',
     email: 'Mandar email',
     confirmar: 'Marcar confirmado',
     hecho: 'Hecho, fichar corte',
