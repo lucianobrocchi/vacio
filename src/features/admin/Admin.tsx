@@ -45,7 +45,14 @@ export function Admin() {
       localStorage.setItem(LS_TOKEN, t);
       setToken(t);
     } catch (e) {
-      setError(String(e) === 'Error: no_cloud' ? 'La nube no está configurada todavía.' : 'Token incorrecto.');
+      const m = String(e);
+      if (m.includes('no_cloud'))
+        setError('Falta Supabase: cargá SUPABASE_URL y SUPABASE_SERVICE_KEY en Vercel y redeployá.');
+      else if (m.includes('no_autorizado'))
+        setError(
+          'No autorizado. Token incorrecto, o la variable ADMIN_TOKEN no llegó al deploy (revisá que esté en Production y hacé Redeploy).',
+        );
+      else setError(`Error del servidor (${m}). ¿Corriste el schema SQL en Supabase?`);
       setLicencias(null);
     } finally {
       setCargando(false);
