@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { obtenerConfig, actualizarConfig } from './db/config';
 import { chequearLicencia, respaldarAhora, type EstadoNube } from './lib/nube';
+import { iniciarSync, syncVivoHabilitado } from './lib/sync';
 import { BottomNav, type Tab } from './components/BottomNav';
 import { AbrirAjustesContext } from './components/contexto';
 import { Logo } from './components/Logo';
@@ -34,9 +35,20 @@ export default function App() {
   const hash = useHashRoute();
   const [licencia, setLicencia] = useState<EstadoNube | null>(null);
   const [desbloqueada, setDesbloqueada] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+  const syncRef = useRef(false);
 
   const listo = config !== undefined;
   const codigo = config?.licenciaCodigo;
+
+  // Arranca el sync en vivo (Modelo B) una vez que la licencia está activa.
+  useEffect(() => {
+    if (syncRef.current || !licencia?.activada || !codigo || !syncVivoHabilitado()) return;
+    syncRef.current = true;
+    const adoptado = localStorage.getItem(`corte.sync.adoptado.${codigo}`) === '1';
+    if (!adoptado) setSincronizando(true);
+    iniciarSync(codigo).finally(() => setSincronizando(false));
+  }, [licencia?.activada, codigo]);
 
   // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
   useEffect(() => {
@@ -74,6 +86,9 @@ export default function App() {
   const bloqueado = !!licencia?.cloud && !licencia.activada && !desbloqueada;
   if (bloqueado) return <Membresia estado={licencia!} onActiva={() => setDesbloqueada(true)} />;
 
+  // Dispositivo que se suma a una barbería: esperamos a bajar sus datos.
+  if (sincronizando) return <Splash texto="Sincronizando tu barbería…" />;
+
   if (!config.onboardingCompletado) return <Onboarding />;
 
   return <AppShell config={config} />;
@@ -107,12 +122,13 @@ function AppShell({ config }: { config: Config }) {
   );
 }
 
-function Splash() {
+function Splash({ texto }: { texto?: string }) {
   return (
-    <div className="flex min-h-full items-center justify-center bg-carbon-50">
+    <div className="flex min-h-full flex-col items-center justify-center gap-4 bg-carbon-50">
       <div className="animate-pop">
         <Logo />
       </div>
+      {texto && <p className="animate-fade text-sm font-semibold text-carbon-900/50">{texto}</p>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Barbero, Bloqueo, Config, Corte, Servicio, Turno } from './types';
+import { encolarCambio } from '../lib/syncCola';
 
 /**
  * Base de datos local de Corte (IndexedDB vía Dexie).
@@ -28,3 +29,20 @@ export class CorteDB extends Dexie {
 }
 
 export const db = new CorteDB();
+
+// Hooks de sync: cada cambio local se encola para subir a la nube (solo si el
+// sync en vivo está activo; si no, no hacen nada). Ver lib/syncCola + lib/sync.
+const TABLAS_SYNC = ['barberos', 'servicios', 'cortes', 'turnos', 'bloqueos'] as const;
+for (const t of TABLAS_SYNC) {
+  db[t].hook('creating', (_pk, obj) => {
+    encolarCambio(t, (obj as { uuid?: string }).uuid, 'put');
+  });
+  db[t].hook('updating', (_mods, _pk, obj) => {
+    encolarCambio(t, (obj as { uuid?: string }).uuid, 'put');
+  });
+  db[t].hook('deleting', (_pk, obj) => {
+    encolarCambio(t, (obj as { uuid?: string }).uuid, 'del');
+  });
+}
+db.config.hook('creating', () => encolarCambio('config', 'singleton', 'put'));
+db.config.hook('updating', () => encolarCambio('config', 'singleton', 'put'));
