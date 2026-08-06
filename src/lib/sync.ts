@@ -131,6 +131,7 @@ async function pull(cli: any): Promise<void> {
   const { data, error } = await cli
     .from('datos')
     .select('*')
+    .eq('owner', ownerId)
     .gt('updated_at', desde)
     .order('updated_at', { ascending: true });
   if (error || !data?.length) return;
@@ -142,8 +143,12 @@ async function pull(cli: any): Promise<void> {
 
 /** Dispositivo que se suma a una barbería que ya tiene datos: adopta la nube. */
 async function adoptarDesdeNube(cli: any): Promise<void> {
-  const { data } = await cli.from('datos').select('*');
-  if (!data) return;
+  // Filtramos por owner explícitamente: no dependemos solo de las políticas
+  // RLS para no mezclar NUNCA los datos de dos barberías.
+  const { data } = await cli.from('datos').select('*').eq('owner', ownerId);
+  // Sin barberos no hay barbería que adoptar: dejamos que corra el onboarding.
+  const hayBarberos = data?.some((r: any) => r.tabla === 'barberos' && !r.deleted);
+  if (!data?.length || !hayBarberos) return;
   await conRemoto(async () => {
     await db.transaction('rw', [db.barberos, db.servicios, db.cortes, db.turnos, db.bloqueos], async () => {
       await Promise.all(TABLAS.map((t) => tablaDe(t).clear()));
@@ -246,10 +251,20 @@ export async function iniciarSync(codigo: string): Promise<ResultadoSync> {
   // ¿Primer dispositivo (siembra) o se suma a una barbería existente (adopta)?
   const marca = `corte.sync.adoptado.${codigo}`;
   if (lsGet(marca) !== '1') {
-    const { count } = await cli.from('datos').select('id', { count: 'exact', head: true });
-    if ((count ?? 0) > 0) await adoptarDesdeNube(cli);
-    else await sembrarEnNube(cli);
-    lsSet(marca, '1');
+    const { count } = await cli
+      .from('datos')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner', ownerId);
+    if ((count ?? 0) > 0) {
+      await adoptarDesdeNube(cli);
+      lsSet(marca, '1');
+    } else if ((await obtenerConfig())?.onboardingCompletado) {
+      // Primer equipo de la barbería: sube lo que ya tiene armado.
+      await sembrarEnNube(cli);
+      lsSet(marca, '1');
+    }
+    // Si la nube está vacía y este equipo todavía no armó su barbería, no
+    // marcamos nada: primero va el onboarding y los hooks suben esos datos.
   }
 
   flags.activo = true;

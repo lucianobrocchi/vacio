@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { obtenerConfig, actualizarConfig } from './db/config';
+import { db } from './db/db';
 import { chequearLicencia, respaldarAhora, restaurarDesdeNube, type EstadoNube } from './lib/nube';
 import { iniciarSync, syncVivoHabilitado } from './lib/sync';
 import { capacidades } from './lib/planes';
@@ -50,6 +51,9 @@ export default function App() {
 
   const listo = config !== undefined;
   const codigo = config?.licenciaCodigo;
+  /** Barbería sin equipo: no hay a quién elegir en el acceso. */
+  const cuantosBarberos = useLiveQuery(() => db.barberos.count(), []);
+  const sinBarberos = cuantosBarberos === 0;
 
   // Con la licencia activa: arranca el sync en vivo (Modelo B) y, si este
   // teléfono todavía no tiene los datos de la barbería, los baja.
@@ -146,7 +150,13 @@ export default function App() {
   const uniendose = licencia.activada && !config.onboardingCompletado && !syncTermino;
   if (sincronizando || uniendose) return <Splash texto="Sincronizando tu barbería…" />;
 
-  if (!config.onboardingCompletado)
+  // Todavía no sabemos si hay equipo cargado: esperamos, así no se ve un
+  // "¿Quién sos?" vacío mientras terminan de bajar los datos.
+  if (cuantosBarberos === undefined) return <Splash />;
+
+  // Si no hay barbería armada —o quedó sin barberos— corresponde el
+  // onboarding. Nunca mostramos "¿Quién sos?" con la lista vacía.
+  if (!config.onboardingCompletado || sinBarberos)
     return <Onboarding onTengoCodigo={() => setPidiendoCodigo(true)} />;
 
   // Teléfono sin barbero identificado (recién sumado a la barbería o después
