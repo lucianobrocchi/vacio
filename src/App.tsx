@@ -95,8 +95,13 @@ export default function App() {
 
   if (config === undefined) return <Splash />;
 
+  // Esperamos la respuesta de la licencia antes de decidir qué mostrar. Si no,
+  // un equipo nuevo alcanza a ver el onboarding antes de que llegue el gate
+  // (chequearLicencia siempre resuelve: con timeout y catch propios).
+  if (licencia === null) return <Splash />;
+
   // Gate de membresía: solo si la nube está activa y este equipo no tiene licencia válida.
-  const bloqueado = !!licencia?.cloud && !licencia.activada && !desbloqueada;
+  const bloqueado = !!licencia.cloud && !licencia.activada && !desbloqueada;
   if (bloqueado) return <Membresia estado={licencia!} onActiva={() => setDesbloqueada(true)} />;
 
   // Dispositivo que se suma a una barbería: esperamos a bajar sus datos.

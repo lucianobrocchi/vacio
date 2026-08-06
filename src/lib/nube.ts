@@ -19,6 +19,10 @@ export interface EstadoNube {
 
 /** Consulta el estado de la licencia y late (heartbeat + stats). */
 export async function chequearLicencia(codigo?: string): Promise<EstadoNube> {
+  // Timeout propio: la app espera esta respuesta para decidir qué pantalla
+  // mostrar, así que nunca puede quedar colgada.
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 8000);
   try {
     const stats = codigo ? await resumenDatos() : undefined;
     const config = await obtenerConfig();
@@ -26,6 +30,7 @@ export async function chequearLicencia(codigo?: string): Promise<EstadoNube> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ codigo, barberia: config?.nombreBarberia, stats }),
+      signal: ctrl.signal,
     });
     if (resp.status === 501) return { cloud: false, activada: false };
     const data = await resp.json();
@@ -33,6 +38,8 @@ export async function chequearLicencia(codigo?: string): Promise<EstadoNube> {
   } catch {
     // Sin conexión: no bloqueamos (modo optimista, se revalida después).
     return { cloud: false, activada: false, error: 'sin_conexion' };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
