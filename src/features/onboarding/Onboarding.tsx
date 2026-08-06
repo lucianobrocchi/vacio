@@ -16,7 +16,8 @@ interface SeleccionServicio {
   precio: number;
 }
 
-export function Onboarding() {
+/** `onTengoCodigo`: el que se suma a una barbería que ya existe. */
+export function Onboarding({ onTengoCodigo }: { onTengoCodigo?: () => void }) {
   const [paso, setPaso] = useState<Paso>('bienvenida');
   const [nombreBarberia, setNombreBarberia] = useState('');
   const [tuNombre, setTuNombre] = useState('');
@@ -103,6 +104,16 @@ export function Onboarding() {
           >
             {copy.bienvenida.continuar}
           </button>
+          {/* El barbero que se suma a una barbería que ya existe. */}
+          {onTengoCodigo && (
+            <button
+              type="button"
+              onClick={onTengoCodigo}
+              className="py-1 text-center text-sm font-semibold text-carbon-900/55 underline"
+            >
+              {copy.bienvenida.tengoCodigo}
+            </button>
+          )}
         </div>
       )}
 

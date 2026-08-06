@@ -12,6 +12,7 @@ export const copy = {
     sosDuenio: '¿Sos el dueño o la dueña?',
     sosDuenioAyuda: 'Activa el panel Barbería, con los números de todo el equipo.',
     continuar: 'Continuar',
+    tengoCodigo: 'Ya tengo un código de barbería',
   },
   servicios: {
     titulo: '¿Qué servicios hacés?',

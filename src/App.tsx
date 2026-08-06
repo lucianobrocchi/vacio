@@ -39,6 +39,9 @@ export default function App() {
   const hash = useHashRoute();
   const [licencia, setLicencia] = useState<EstadoNube | null>(null);
   const [desbloqueada, setDesbloqueada] = useState(false);
+  // Puerta explícita: "ya tengo un código" desde el onboarding, por si el
+  // gate no llegó a aparecer (sin conexión, versión cacheada, etc.).
+  const [pidiendoCodigo, setPidiendoCodigo] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const syncRef = useRef(false);
 
@@ -102,12 +105,22 @@ export default function App() {
 
   // Gate de membresía: solo si la nube está activa y este equipo no tiene licencia válida.
   const bloqueado = !!licencia.cloud && !licencia.activada && !desbloqueada;
-  if (bloqueado) return <Membresia estado={licencia!} onActiva={() => setDesbloqueada(true)} />;
+  if (bloqueado || pidiendoCodigo)
+    return (
+      <Membresia
+        estado={licencia}
+        onActiva={() => {
+          setDesbloqueada(true);
+          setPidiendoCodigo(false);
+        }}
+      />
+    );
 
   // Dispositivo que se suma a una barbería: esperamos a bajar sus datos.
   if (sincronizando) return <Splash texto="Sincronizando tu barbería…" />;
 
-  if (!config.onboardingCompletado) return <Onboarding />;
+  if (!config.onboardingCompletado)
+    return <Onboarding onTengoCodigo={() => setPidiendoCodigo(true)} />;
 
   // Teléfono sin barbero identificado (recién sumado a la barbería o después
   // de "cambiar de barbero"): que entre con su PIN.
