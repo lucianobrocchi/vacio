@@ -4,7 +4,10 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/rest\/v1\/?$/, '');
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
+  ?.trim()
+  .replace(/\/rest\/v1\/?$/, '')
+  .replace(/\/+$/, '');
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 let cliente: SupabaseClient | null = null;
@@ -12,6 +15,15 @@ let cliente: SupabaseClient | null = null;
 /** ¿La nube (Supabase) está configurada en este build? */
 export function supaConfigurado(): boolean {
   return !!(url && anon);
+}
+
+/** A qué proyecto de Supabase apunta el navegador (para diagnosticar). */
+export function supaHost(): string {
+  try {
+    return url ? new URL(url).host : '';
+  } catch {
+    return url ?? '';
+  }
 }
 
 /** Cliente de Supabase (singleton) o null si no está configurado. */

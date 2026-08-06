@@ -8,7 +8,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Table } from 'dexie';
-import { supa } from './supa';
+import { supa, supaHost } from './supa';
 import { db } from '../db/db';
 import { flags, pendientes, encolarCambio } from './syncCola';
 import { obtenerConfig } from '../db/config';
@@ -280,7 +280,7 @@ async function arrancar(cli: any, codigo: string): Promise<ResultadoSync> {
     password: d.password,
   });
   if (error || !sesion?.user) {
-    ultimoError = `login: ${error?.message ?? 'sin sesión'}`.slice(0, 120);
+    ultimoError = `login en ${supaHost() || '(sin URL)'}: ${error?.message ?? 'sin sesión'}`.slice(0, 140);
     return { ok: false, error: 'auth' };
   }
   ownerId = sesion.user.id;
