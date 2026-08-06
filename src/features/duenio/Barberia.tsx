@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { cortesEntre } from '../../db/cortes';
 import { listarBarberos, COMISION_DEFAULT } from '../../db/barberos';
 import { turnosDelDia } from '../../db/turnos';
-import { totales, variacion, porBarbero } from '../../lib/stats';
+import { ventasEntre } from '../../db/ventas';
+import { totales, variacion, porBarbero, totalesVentas, ventasPorBarbero } from '../../lib/stats';
 import { rangoPeriodo, rangoAnterior, claveDia } from '../../lib/fecha';
 import { formatPesos } from '../../lib/format';
 import { Pantalla } from '../../components/Pantalla';
@@ -26,24 +27,61 @@ export function Barberia({ config }: { config: Config }) {
 
   const cortes = useLiveQuery(() => cortesEntre(desde, hasta), [desde, hasta]);
   const cortesAnt = useLiveQuery(() => cortesEntre(desdeAnt, hastaAnt), [desdeAnt, hastaAnt]);
+  const ventas = useLiveQuery(() => ventasEntre(desde, hasta), [desde, hasta]);
+  const ventasAnt = useLiveQuery(() => ventasEntre(desdeAnt, hastaAnt), [desdeAnt, hastaAnt]);
   const turnosHoy = useLiveQuery(() => turnosDelDia(claveDia()), []) ?? [];
 
   const t = totales(cortes ?? []);
   const tAnt = totales(cortesAnt ?? []);
-  const varFact = variacion(t.facturado, tAnt.facturado);
+  const p = totalesVentas(ventas ?? []);
+  const pAnt = totalesVentas(ventasAnt ?? []);
+
+  // Facturación total = servicios + productos.
+  const facturadoTotal = t.facturado + p.facturado;
+  const varFact = variacion(facturadoTotal, tAnt.facturado + pAnt.facturado);
 
   const barberoDe = (uuid: string) => barberos.find((b) => b.uuid === uuid);
   const comisionDe = (uuid: string) => barberoDe(uuid)?.comision ?? COMISION_DEFAULT;
 
-  // Ranking con comisión calculada por barbero.
+  // Ranking por barbero: comisión de cortes + comisión de productos.
+  const ventasDe = ventasPorBarbero(ventas ?? []);
   const filas = porBarbero(cortes ?? []).map((r) => {
     const pct = comisionDe(r.barberoUuid);
-    const comision = Math.round((r.facturado * pct) / 100);
-    return { ...r, pct, comision, neto: r.facturado - comision };
+    const comisionCortes = Math.round((r.facturado * pct) / 100);
+    const vp = ventasDe.get(r.barberoUuid);
+    const prodFacturado = vp?.facturado ?? 0;
+    const comisionProd = vp?.comisiones ?? 0;
+    const comision = comisionCortes + comisionProd;
+    return {
+      ...r,
+      pct,
+      comision,
+      prodFacturado,
+      total: r.facturado + prodFacturado,
+      neto: r.facturado + prodFacturado - comision,
+    };
   });
-  const maxFact = filas[0]?.facturado || 1;
+  // Barberos que solo vendieron productos (sin cortes en el período).
+  for (const [uuid, vp] of ventasDe) {
+    if (filas.some((f) => f.barberoUuid === uuid)) continue;
+    filas.push({
+      barberoUuid: uuid,
+      cortes: 0,
+      facturado: 0,
+      pct: comisionDe(uuid),
+      comision: vp.comisiones,
+      prodFacturado: vp.facturado,
+      total: vp.facturado,
+      neto: vp.facturado - vp.comisiones,
+    });
+  }
+  filas.sort((a, b) => b.total - a.total);
+
+  const maxFact = filas[0]?.total || 1;
   const comisionesTotal = filas.reduce((a, f) => a + f.comision, 0);
-  const netoLocal = t.facturado - comisionesTotal;
+  const netoLocal = facturadoTotal - p.costo - comisionesTotal;
+  const efectivoTotal = t.efectivo + p.efectivo;
+  const transferenciaTotal = t.transferencia + p.transferencia;
 
   const nombreDe = (uuid: string) => {
     const b = barberoDe(uuid);
@@ -85,15 +123,16 @@ export function Barberia({ config }: { config: Config }) {
           )}
         </div>
         <p className="mt-1 text-[2.6rem] font-extrabold leading-none">
-          <NumeroAnimado valor={t.facturado} duracion={900} />
+          <NumeroAnimado valor={facturadoTotal} duracion={900} />
         </p>
         <p className="num mt-1 text-sm text-white/60">
-          {t.cortes} {copy.resumen.cortes.toLowerCase()}
+          {t.cortes} {copy.resumen.cortes.toLowerCase()} · {p.unidades}{' '}
+          {copy.desglose.productos.toLowerCase()}
         </p>
       </div>
 
       {/* Comisiones vs neto */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div className="mb-3 grid grid-cols-2 gap-3">
         <div className="card anim-subir p-4" style={{ animationDelay: '60ms' }}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
             {copy.resumen.comisiones}
@@ -110,6 +149,59 @@ export function Barberia({ config }: { config: Config }) {
             <NumeroAnimado valor={netoLocal} />
           </p>
         </div>
+      </div>
+
+      {/* De dónde viene la plata: servicios vs productos */}
+      <div className="card anim-subir mb-3 p-4" style={{ animationDelay: '160ms' }}>
+        <h3 className="mb-3 font-bold">{copy.desglose.titulo}</h3>
+        <Fuente
+          label={copy.desglose.servicios}
+          detalle={`${t.cortes} ${copy.resumen.cortes.toLowerCase()}`}
+          monto={t.facturado}
+          total={facturadoTotal}
+          clase="from-oro-dark to-oro"
+        />
+        <Fuente
+          label={copy.desglose.productos}
+          detalle={copy.desglose.unidades(p.unidades)}
+          monto={p.facturado}
+          total={facturadoTotal}
+          clase="from-carbon-700 to-carbon-900"
+        />
+      </div>
+
+      {/* Cómo te pagaron */}
+      <div className="card anim-subir mb-3 p-4" style={{ animationDelay: '200ms' }}>
+        <h3 className="mb-3 font-bold">{copy.caja.titulo}</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-ok/10 p-3 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/45">
+              {copy.caja.efectivo}
+            </p>
+            <p className="num mt-0.5 text-xl font-extrabold text-ok">{formatPesos(efectivoTotal)}</p>
+          </div>
+          <div className="rounded-2xl bg-carbon-100 p-3 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/45">
+              {copy.caja.transferencia}
+            </p>
+            <p className="num mt-0.5 text-xl font-extrabold">{formatPesos(transferenciaTotal)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* La cuenta final, línea por línea */}
+      <div className="card anim-subir mb-4 p-4" style={{ animationDelay: '240ms' }}>
+        <h3 className="mb-3 font-bold">{copy.cuenta.titulo}</h3>
+        <ul className="space-y-2 text-sm">
+          <Linea label={copy.cuenta.bruto} monto={facturadoTotal} />
+          <Linea label={copy.cuenta.costoMercaderia} monto={-p.costo} />
+          <Linea label={copy.cuenta.comisiones} monto={-comisionesTotal} />
+        </ul>
+        <div className="mt-3 flex items-center justify-between border-t border-carbon-100 pt-3">
+          <span className="font-bold">{copy.cuenta.neto}</span>
+          <span className="num text-2xl font-extrabold text-ok">{formatPesos(netoLocal)}</span>
+        </div>
+        <p className="mt-2 text-xs text-carbon-900/45">{copy.cuenta.ayuda}</p>
       </div>
 
       {/* Detalle por barbero */}
@@ -142,14 +234,15 @@ export function Barberia({ config }: { config: Config }) {
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-oro-dark to-oro"
                       style={{
-                        width: `${(f.facturado / maxFact) * 100}%`,
+                        width: `${(f.total / maxFact) * 100}%`,
                         transformOrigin: 'left',
                         animation: `grow-x 0.7s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.1}s both`,
                       }}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-1 text-center">
+                  <div className="grid grid-cols-4 gap-1 text-center">
                     <Celda label={copy.col.factura} valor={formatPesos(f.facturado)} />
+                    <Celda label={copy.colProd} valor={formatPesos(f.prodFacturado)} />
                     <Celda label={copy.col.comision} valor={formatPesos(f.comision)} tono="text-oro-dark" />
                     <Celda label={copy.col.neto} valor={formatPesos(f.neto)} tono="text-ok" />
                   </div>
@@ -198,7 +291,58 @@ function Celda({ label, valor, tono = 'text-carbon-900' }: { label: string; valo
   return (
     <div className="rounded-xl bg-carbon-50 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-carbon-900/40">{label}</p>
-      <p className={`num text-sm font-bold ${tono}`}>{valor}</p>
+      <p className={`num text-xs font-bold ${tono}`}>{valor}</p>
     </div>
+  );
+}
+
+/** Una fuente de facturación (servicios / productos) con su barra de peso. */
+function Fuente({
+  label,
+  detalle,
+  monto,
+  total,
+  clase,
+}: {
+  label: string;
+  detalle: string;
+  monto: number;
+  total: number;
+  clase: string;
+}) {
+  const pct = total > 0 ? Math.round((monto / total) * 100) : 0;
+  return (
+    <div className="mb-3 last:mb-0">
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-sm font-semibold">
+          {label} <span className="text-xs font-normal text-carbon-900/45">· {detalle}</span>
+        </span>
+        <span className="num text-sm font-bold">{formatPesos(monto)}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-carbon-100">
+          <div
+            className={`h-full rounded-full bg-gradient-to-r ${clase}`}
+            style={{ width: `${pct}%`, transformOrigin: 'left', animation: 'grow-x 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both' }}
+          />
+        </div>
+        <span className="num w-9 shrink-0 text-right text-xs font-semibold text-carbon-900/45">
+          {pct}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Una línea de la cuenta final (los negativos se muestran en rojo). */
+function Linea({ label, monto }: { label: string; monto: number }) {
+  const negativo = monto < 0;
+  return (
+    <li className="flex items-center justify-between">
+      <span className="text-carbon-900/65">{label}</span>
+      <span className={`num font-semibold ${negativo ? 'text-rojo' : ''}`}>
+        {negativo ? `− ${formatPesos(-monto)}` : formatPesos(monto)}
+      </span>
+    </li>
   );
 }

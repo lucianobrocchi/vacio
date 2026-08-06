@@ -10,6 +10,9 @@ export interface Volcado {
   cortes: unknown[];
   turnos: unknown[];
   bloqueos: unknown[];
+  /** Desde v2: stock y ventas de productos. */
+  productos?: unknown[];
+  ventas?: unknown[];
   config: Partial<Config> | null;
 }
 
@@ -21,26 +24,40 @@ function configParaExportar(config: Config | undefined): Partial<Config> | null 
 }
 
 export async function exportarDatos(): Promise<Volcado> {
-  const [barberos, servicios, cortes, turnos, bloqueos, config] = await Promise.all([
-    db.barberos.toArray(),
-    db.servicios.toArray(),
-    db.cortes.toArray(),
-    db.turnos.toArray(),
-    db.bloqueos.toArray(),
-    db.config.toCollection().first(),
-  ]);
-  return { v: 1, barberos, servicios, cortes, turnos, bloqueos, config: configParaExportar(config) };
+  const [barberos, servicios, cortes, turnos, bloqueos, productos, ventas, config] =
+    await Promise.all([
+      db.barberos.toArray(),
+      db.servicios.toArray(),
+      db.cortes.toArray(),
+      db.turnos.toArray(),
+      db.bloqueos.toArray(),
+      db.productos.toArray(),
+      db.ventas.toArray(),
+      db.config.toCollection().first(),
+    ]);
+  return {
+    v: 2,
+    barberos,
+    servicios,
+    cortes,
+    turnos,
+    bloqueos,
+    productos,
+    ventas,
+    config: configParaExportar(config),
+  };
 }
 
 /** Resumen liviano para que el panel admin vea el pulso de cada barbería. */
 export async function resumenDatos(): Promise<Record<string, number>> {
-  const [barberos, cortes, turnos] = await Promise.all([
+  const [barberos, cortes, turnos, ventas] = await Promise.all([
     db.barberos.count(),
     db.cortes.count(),
     db.turnos.count(),
+    db.ventas.count(),
   ]);
   const ultimo = await db.cortes.orderBy('fecha').last();
-  return { barberos, cortes, turnos, ultimoCorte: ultimo?.fecha ?? 0 };
+  return { barberos, cortes, turnos, ventas, ultimoCorte: ultimo?.fecha ?? 0 };
 }
 
 /**
@@ -48,10 +65,11 @@ export async function resumenDatos(): Promise<Record<string, number>> {
  * conserva la licencia de ESTE dispositivo.
  */
 export async function importarDatos(data: Volcado): Promise<void> {
-  if (!data || data.v !== 1) throw new Error('Respaldo inválido');
+  // v1 = respaldo viejo (sin productos ni ventas); v2 = con stock.
+  if (!data || (data.v !== 1 && data.v !== 2)) throw new Error('Respaldo inválido');
   await db.transaction(
     'rw',
-    [db.barberos, db.servicios, db.cortes, db.turnos, db.bloqueos, db.config],
+    [db.barberos, db.servicios, db.cortes, db.turnos, db.bloqueos, db.productos, db.ventas, db.config],
     async () => {
       await Promise.all([
         db.barberos.clear(),
@@ -59,12 +77,16 @@ export async function importarDatos(data: Volcado): Promise<void> {
         db.cortes.clear(),
         db.turnos.clear(),
         db.bloqueos.clear(),
+        db.productos.clear(),
+        db.ventas.clear(),
       ]);
       if (data.barberos?.length) await db.barberos.bulkAdd(data.barberos as never[]);
       if (data.servicios?.length) await db.servicios.bulkAdd(data.servicios as never[]);
       if (data.cortes?.length) await db.cortes.bulkAdd(data.cortes as never[]);
       if (data.turnos?.length) await db.turnos.bulkAdd(data.turnos as never[]);
       if (data.bloqueos?.length) await db.bloqueos.bulkAdd(data.bloqueos as never[]);
+      if (data.productos?.length) await db.productos.bulkAdd(data.productos as never[]);
+      if (data.ventas?.length) await db.ventas.bulkAdd(data.ventas as never[]);
 
       // Config: actualiza los campos del negocio, preserva la licencia local.
       if (data.config) {

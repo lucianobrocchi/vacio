@@ -21,7 +21,15 @@ export function syncVivoHabilitado(): boolean {
   return !!supa() && (import.meta.env.VITE_SYNC_VIVO as string | undefined) !== '0';
 }
 
-const TABLAS = ['barberos', 'servicios', 'cortes', 'turnos', 'bloqueos'] as const;
+const TABLAS = [
+  'barberos',
+  'servicios',
+  'cortes',
+  'turnos',
+  'bloqueos',
+  'productos',
+  'ventas',
+] as const;
 type Tabla = (typeof TABLAS)[number];
 const esTablaSync = (t: string): t is Tabla => (TABLAS as readonly string[]).includes(t);
 const tablaDe = (t: Tabla): Table<any, number> => db[t] as unknown as Table<any, number>;

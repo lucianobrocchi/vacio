@@ -64,3 +64,31 @@ export function asuntoEmail(turno: Turno, nombreBarberia: string): string {
 export function linkReservas(): string {
   return `${location.origin}${location.pathname}#/reservar`;
 }
+
+/** Link de reservas apuntando a un barbero (queda preseleccionado). */
+export function linkReservasBarbero(barberoUuid: string): string {
+  return `${linkReservas()}?b=${encodeURIComponent(barberoUuid)}`;
+}
+
+/** Link público de la tienda de un barbero (sus productos). */
+export function linkTienda(barberoUuid: string): string {
+  return `${location.origin}${location.pathname}#/tienda?b=${encodeURIComponent(barberoUuid)}`;
+}
+
+/** Pedido de productos que el cliente le manda al barbero por WhatsApp. */
+export function mensajePedido(
+  items: { nombre: string; cantidad: number; precio: number }[],
+  nombreBarbero: string,
+  nombreCliente?: string,
+): string {
+  const lineas = items
+    .map((i) => `• ${i.cantidad}× ${i.nombre} — ${formatPesos(i.precio * i.cantidad)}`)
+    .join('\n');
+  const total = items.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  return (
+    `¡Hola ${nombreBarbero}! Te quería encargar:\n\n${lineas}\n\n` +
+    `Total: ${formatPesos(total)}\n` +
+    (nombreCliente ? `Soy ${nombreCliente}. ` : '') +
+    `¿Los tenés?`
+  );
+}

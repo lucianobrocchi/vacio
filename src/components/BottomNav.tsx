@@ -2,16 +2,18 @@ import {
   IconoCalendario,
   IconoClientes,
   IconoLocal,
+  IconoProducto,
   IconoStats,
   IconoTijera,
 } from './Iconos';
 
-export type Tab = 'fichar' | 'agenda' | 'clientes' | 'stats' | 'barberia';
+export type Tab = 'fichar' | 'agenda' | 'clientes' | 'stock' | 'stats' | 'barberia';
 
 const TABS: { id: Tab; label: string; Icono: typeof IconoTijera; soloDuenio?: boolean }[] = [
   { id: 'fichar', label: 'Fichar', Icono: IconoTijera },
   { id: 'agenda', label: 'Agenda', Icono: IconoCalendario },
   { id: 'clientes', label: 'Clientes', Icono: IconoClientes },
+  { id: 'stock', label: 'Stock', Icono: IconoProducto },
   { id: 'stats', label: 'Stats', Icono: IconoStats },
   { id: 'barberia', label: 'Barbería', Icono: IconoLocal, soloDuenio: true },
 ];

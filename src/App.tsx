@@ -15,6 +15,8 @@ import { Stats } from './features/stats/Stats';
 import { Barberia } from './features/duenio/Barberia';
 import { Ajustes } from './features/ajustes/Ajustes';
 import { Reservar } from './features/reservar/Reservar';
+import { Stock } from './features/stock/Stock';
+import { Tienda } from './features/tienda/Tienda';
 import { Membresia } from './features/nube/Membresia';
 import { Admin } from './features/admin/Admin';
 import { AsistenteBurbuja } from './components/AsistenteBurbuja';
@@ -85,8 +87,9 @@ export default function App() {
     return () => clearInterval(id);
   }, [licencia?.activada, licencia?.plan, codigo]);
 
-  // Página pública de reservas (cliente) y panel admin (Luciano): sin gate.
+  // Páginas públicas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;
+  if (hash.startsWith('#/tienda')) return <Tienda />;
   if (hash.startsWith('#/admin')) return <Admin />;
 
   if (config === undefined) return <Splash />;
@@ -121,6 +124,7 @@ function AppShell({ config }: { config: Config }) {
         {tab === 'fichar' && <Fichar config={config} />}
         {tab === 'agenda' && <Agenda config={config} />}
         {tab === 'clientes' && <Clientes config={config} />}
+        {tab === 'stock' && <Stock config={config} />}
         {tab === 'stats' && <Stats config={config} />}
         {tab === 'barberia' && config.esDuenio && <Barberia config={config} />}
 

@@ -1,7 +1,16 @@
 import { db } from './db';
 import { uuid } from '../lib/uuid';
 import { claveDia, sumarDias, timestampDe, minAHora } from '../lib/fecha';
-import type { Barbero, Bloqueo, Corte, MedioPago, Servicio, Turno } from './types';
+import type {
+  Barbero,
+  Bloqueo,
+  Corte,
+  MedioPago,
+  Producto,
+  Servicio,
+  Turno,
+  Venta,
+} from './types';
 
 // Datos de demo: ~3 semanas de cortes, turnos próximos y un bloqueo,
 // para ver la app llena sin cargar nada. Se saca con "Empezar de cero".
@@ -16,6 +25,13 @@ const SERVICIOS_DEMO = [
   { nombre: 'Corte + barba', precio: 14000, duracionMin: 45, emoji: '🧔' },
   { nombre: 'Barba', precio: 6000, duracionMin: 20, emoji: '🪒' },
   { nombre: 'Color / mechas', precio: 20000, duracionMin: 90, emoji: '🎨' },
+];
+
+const PRODUCTOS_DEMO = [
+  { nombre: 'Pomada efecto mate', precio: 9000, costo: 5200, stock: 12, comision: 25, emoji: '🫙' },
+  { nombre: 'Shampoo anticaída', precio: 12000, costo: 7500, stock: 8, comision: 20, emoji: '🧴' },
+  { nombre: 'Aceite para barba', precio: 8500, costo: 4800, stock: 6, comision: 25, emoji: '🧔' },
+  { nombre: 'Gorra del local', precio: 15000, costo: 8000, stock: 4, comision: 15, emoji: '🧢' },
 ];
 
 const CLIENTES_DEMO = [
@@ -119,6 +135,56 @@ export async function cargarDatosDemo(barberoExistenteUuid?: string): Promise<vo
   }
   await db.cortes.bulkAdd(cortes);
 
+  // Productos: los primeros dos quedan del local, el resto del primer barbero.
+  const productosActuales = await db.productos.count();
+  const productos: Producto[] = PRODUCTOS_DEMO.map((p, i) => ({
+    uuid: uuid(),
+    nombre: p.nombre,
+    precio: p.precio,
+    costo: p.costo,
+    stock: p.stock,
+    comision: p.comision,
+    barberoUuid: i < 2 ? '' : barberosUuids[0],
+    emoji: p.emoji,
+    orden: productosActuales + i + 1,
+    activo: 1 as const,
+    updatedAt: ahora,
+  }));
+  await db.productos.bulkAdd(productos);
+
+  // Ventas de productos repartidas en las últimas 3 semanas.
+  const ventas: Venta[] = [];
+  for (let d = 0; d < 21; d++) {
+    const dia = sumarDias(hoy, -d);
+    const diaSemana = new Date(timestampDe(dia, '12:00')).getDay();
+    if (diaSemana === 0 || diaSemana === 1) continue;
+    if (rand() < 0.45) continue; // no todos los días se vende
+    const cantidadVentas = 1 + Math.floor(rand() * 2);
+    for (let v = 0; v < cantidadVentas; v++) {
+      const producto = productos[Math.floor(rand() * productos.length)];
+      const fecha = timestampDe(dia, minAHora(11 * 60 + Math.floor(rand() * 16) * 30));
+      if (fecha > ahora) continue;
+      ventas.push({
+        uuid: uuid(),
+        fecha,
+        dia,
+        productoUuid: producto.uuid,
+        productoNombre: producto.nombre,
+        precio: producto.precio,
+        costo: producto.costo,
+        cantidad: rand() < 0.8 ? 1 : 2,
+        barberoUuid: barberosUuids[Math.floor(rand() * barberosUuids.length)],
+        medioPago: (rand() < 0.5 ? 'efectivo' : 'transferencia') as MedioPago,
+        comision: producto.comision,
+        clienteNombre:
+          rand() < 0.5 ? CLIENTES_DEMO[Math.floor(rand() * CLIENTES_DEMO.length)].nombre : undefined,
+        origen: rand() < 0.3 ? 'link' : 'barbero',
+        updatedAt: ahora,
+      });
+    }
+  }
+  await db.ventas.bulkAdd(ventas);
+
   // Turnos: algunos para hoy y los próximos días.
   const turnos: Turno[] = [];
   const horasTurnos = ['15:00', '16:30', '18:00'];
@@ -165,7 +231,7 @@ export async function cargarDatosDemo(barberoExistenteUuid?: string): Promise<vo
   await db.bloqueos.add(bloqueo);
 }
 
-/** Borra TODO: cortes, turnos, bloqueos, barberos, servicios y config. */
+/** Borra TODO: cortes, turnos, bloqueos, barberos, servicios, stock y config. */
 export async function borrarTodo(): Promise<void> {
   await Promise.all([
     db.cortes.clear(),
@@ -173,6 +239,8 @@ export async function borrarTodo(): Promise<void> {
     db.bloqueos.clear(),
     db.barberos.clear(),
     db.servicios.clear(),
+    db.productos.clear(),
+    db.ventas.clear(),
     db.config.clear(),
   ]);
 }

@@ -16,6 +16,8 @@ export interface Barbero {
   emoji?: string;
   /** Comisión del barbero, en % de lo que factura (0–100). Default 50. */
   comision: number;
+  /** Su WhatsApp: ahí le llegan los pedidos de productos de su link. */
+  telefono?: string;
   orden: number;
   activo: 0 | 1;
   updatedAt: number;
@@ -76,6 +78,58 @@ export interface Turno {
   /** ID del evento en Google Calendar, si se sincronizó. */
   googleEventId?: string;
   creadoEn: number;
+  updatedAt: number;
+}
+
+/**
+ * Un producto para vender (pomada, shampoo, gorra). Cada barbero puede tener
+ * su propio stock: `barberoUuid` vacío = producto del local (lo vende
+ * cualquiera); con uuid = stock de ese barbero.
+ */
+export interface Producto {
+  id?: number;
+  uuid: string;
+  nombre: string;
+  /** Precio de venta al cliente. */
+  precio: number;
+  /** Lo que costó comprarlo (para saber el margen real). */
+  costo: number;
+  /** Unidades disponibles. */
+  stock: number;
+  /** % que se lleva el barbero por vender este producto (0–100). */
+  comision: number;
+  /** Dueño del stock: '' = del local, o el uuid del barbero. */
+  barberoUuid: string;
+  emoji?: string;
+  orden: number;
+  activo: 0 | 1;
+  updatedAt: number;
+}
+
+/** Quién originó la venta: el barbero en el local o el link público. */
+export type OrigenVenta = 'barbero' | 'link';
+
+/** Una venta de producto (ya cobrada). Descuenta stock. */
+export interface Venta {
+  id?: number;
+  uuid: string;
+  fecha: number;
+  /** Clave del día local "YYYY-MM-DD". */
+  dia: string;
+  productoUuid: string;
+  /** Snapshots: si después cambiás el producto, el historial no se toca. */
+  productoNombre: string;
+  /** Precio unitario cobrado. */
+  precio: number;
+  /** Costo unitario al momento de vender. */
+  costo: number;
+  cantidad: number;
+  barberoUuid: string;
+  medioPago: MedioPago;
+  /** % de comisión del barbero al momento de vender. */
+  comision: number;
+  clienteNombre?: string;
+  origen: OrigenVenta;
   updatedAt: number;
 }
 

@@ -28,6 +28,16 @@ export function IconoTijera(props: Props) {
   );
 }
 
+/** Botella/producto — Stock. */
+export function IconoProducto(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10 2h4v3l1.6 2.4a3 3 0 0 1 .4 1.5V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8.9c0-.5.1-1 .4-1.5L10 5V2Z" />
+      <path d="M8 13h8" fill="none" />
+    </svg>
+  );
+}
+
 /** Calendario — Agenda. */
 export function IconoCalendario(props: Props) {
   return (

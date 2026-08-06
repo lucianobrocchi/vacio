@@ -16,6 +16,12 @@ import { copy } from './reservar.copy';
 
 type Paso = 'servicio' | 'barbero' | 'diaHora' | 'datos' | 'listo';
 
+/** Barbero preseleccionado desde su link propio: "#/reservar?b=<uuid>". */
+function barberoDelHash(): string {
+  const q = location.hash.split('?')[1] ?? '';
+  return new URLSearchParams(q).get('b') ?? '';
+}
+
 /**
  * Página pública de reservas (#/reservar): la ve el cliente desde el link
  * de Instagram. Sin nav de la app, un paso por pantalla, cero vueltas.
@@ -27,7 +33,7 @@ export function Reservar() {
 
   const [paso, setPaso] = useState<Paso>('servicio');
   const [servicio, setServicio] = useState<Servicio | null>(null);
-  const [barberoUuid, setBarberoUuid] = useState('');
+  const [barberoUuid, setBarberoUuid] = useState(barberoDelHash);
   const [dia, setDia] = useState(claveDia());
   const [hora, setHora] = useState('');
   const [nombre, setNombre] = useState('');
@@ -119,7 +125,8 @@ export function Reservar() {
               className={btnOpcion(servicio?.uuid === s.uuid)}
               onClick={() => {
                 setServicio(s);
-                setPaso(barberos.length > 1 ? 'barbero' : 'diaHora');
+                // Si el link ya trae barbero (link propio), salteamos ese paso.
+                setPaso(barberos.length > 1 && !barberoUuid ? 'barbero' : 'diaHora');
               }}
             >
               <span className="flex items-center justify-between">

@@ -2,7 +2,7 @@
 // filtradas por período/barbero (lógica pura, fácil de testear).
 
 import { claveDia, desdeClave, sumarDias } from './fecha';
-import type { Corte } from '../db/types';
+import type { Corte, Venta } from '../db/types';
 
 export interface Totales {
   cortes: number;
@@ -109,6 +109,90 @@ export function porBarbero(cortes: Corte[]): PuntoBarbero[] {
     mapa.set(c.barberoUuid, punto);
   }
   return [...mapa.values()].sort((a, b) => b.facturado - a.facturado);
+}
+
+// ---- Productos (ventas) ----
+
+/** Total cobrado por una venta (precio unitario × cantidad). */
+export const totalVenta = (v: Venta): number => v.precio * v.cantidad;
+
+/** Lo que se lleva el barbero por esa venta. */
+export const comisionVenta = (v: Venta): number => Math.round((totalVenta(v) * v.comision) / 100);
+
+/** Lo que costó la mercadería vendida (para el margen real del local). */
+export const costoVenta = (v: Venta): number => (v.costo ?? 0) * v.cantidad;
+
+export interface TotalesVentas {
+  ventas: number;
+  unidades: number;
+  facturado: number;
+  costo: number;
+  comisiones: number;
+  efectivo: number;
+  transferencia: number;
+  /** Facturado − costo de la mercadería − comisiones. */
+  neto: number;
+}
+
+export function totalesVentas(ventas: Venta[]): TotalesVentas {
+  let facturado = 0;
+  let costo = 0;
+  let comisiones = 0;
+  let unidades = 0;
+  let efectivo = 0;
+  for (const v of ventas) {
+    const total = totalVenta(v);
+    facturado += total;
+    costo += costoVenta(v);
+    comisiones += comisionVenta(v);
+    unidades += v.cantidad;
+    if (v.medioPago === 'efectivo') efectivo += total;
+  }
+  return {
+    ventas: ventas.length,
+    unidades,
+    facturado,
+    costo,
+    comisiones,
+    efectivo,
+    transferencia: facturado - efectivo,
+    neto: facturado - costo - comisiones,
+  };
+}
+
+export interface PuntoProducto {
+  productoNombre: string;
+  unidades: number;
+  facturado: number;
+}
+
+/** Ranking de productos vendidos (por facturado, descendente). */
+export function porProducto(ventas: Venta[]): PuntoProducto[] {
+  const mapa = new Map<string, PuntoProducto>();
+  for (const v of ventas) {
+    const punto = mapa.get(v.productoNombre) ?? {
+      productoNombre: v.productoNombre,
+      unidades: 0,
+      facturado: 0,
+    };
+    punto.unidades += v.cantidad;
+    punto.facturado += totalVenta(v);
+    mapa.set(v.productoNombre, punto);
+  }
+  return [...mapa.values()].sort((a, b) => b.facturado - a.facturado);
+}
+
+/** Totales de productos por barbero (para el panel del dueño). */
+export function ventasPorBarbero(ventas: Venta[]): Map<string, TotalesVentas> {
+  const grupos = new Map<string, Venta[]>();
+  for (const v of ventas) {
+    const lista = grupos.get(v.barberoUuid) ?? [];
+    lista.push(v);
+    grupos.set(v.barberoUuid, lista);
+  }
+  const salida = new Map<string, TotalesVentas>();
+  for (const [uuid, lista] of grupos) salida.set(uuid, totalesVentas(lista));
+  return salida;
 }
 
 /** El mejor día del período (por facturado). */

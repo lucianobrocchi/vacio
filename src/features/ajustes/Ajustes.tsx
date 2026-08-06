@@ -554,25 +554,34 @@ function BarberoSheet({
   const [nombre, setNombre] = useState('');
   const [emoji, setEmoji] = useState('');
   const [comision, setComision] = useState(COMISION_DEFAULT);
+  const [telefono, setTelefono] = useState('');
 
   useEffect(() => {
     if (!abierto) return;
     setNombre(barbero?.nombre ?? '');
     setEmoji(barbero?.emoji ?? '');
     setComision(barbero?.comision ?? COMISION_DEFAULT);
+    setTelefono(barbero?.telefono ?? '');
   }, [abierto, barbero]);
 
   async function guardar() {
     if (!nombre.trim()) return;
     const pct = Math.max(0, Math.min(100, comision));
+    const tel = telefono.trim() || undefined;
     if (barbero) {
       await actualizarBarbero(barbero.uuid, {
         nombre: nombre.trim(),
         emoji: emoji.trim() || undefined,
         comision: pct,
+        telefono: tel,
       });
     } else {
-      await crearBarbero({ nombre: nombre.trim(), emoji: emoji.trim() || undefined, comision: pct });
+      await crearBarbero({
+        nombre: nombre.trim(),
+        emoji: emoji.trim() || undefined,
+        comision: pct,
+        telefono: tel,
+      });
     }
     onCerrar();
   }
@@ -614,6 +623,17 @@ function BarberoSheet({
             <span className="font-semibold text-carbon-900/40">%</span>
           </div>
           <span className="mt-1 block text-xs text-carbon-900/50">{c.comisionAyuda}</span>
+        </Campo>
+        <Campo label={c.telefono}>
+          <input
+            className="input-texto num"
+            type="tel"
+            inputMode="tel"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+            placeholder={c.telefonoPlaceholder}
+          />
+          <span className="mt-1 block text-xs text-carbon-900/50">{c.telefonoAyuda}</span>
         </Campo>
         <button type="button" className="btn-primario" disabled={!nombre.trim()} onClick={guardar}>
           {c.guardar}

@@ -19,6 +19,7 @@ export async function crearBarbero(datos: {
   nombre: string;
   emoji?: string;
   comision?: number;
+  telefono?: string;
 }): Promise<string> {
   const orden = (await db.barberos.count()) + 1;
   const nuevo: Barbero = {
@@ -26,6 +27,7 @@ export async function crearBarbero(datos: {
     nombre: datos.nombre.trim(),
     emoji: datos.emoji,
     comision: datos.comision ?? COMISION_DEFAULT,
+    telefono: datos.telefono,
     orden,
     activo: 1,
     updatedAt: Date.now(),
@@ -36,7 +38,7 @@ export async function crearBarbero(datos: {
 
 export async function actualizarBarbero(
   barberoUuid: string,
-  cambios: Partial<Pick<Barbero, 'nombre' | 'emoji' | 'activo' | 'comision'>>,
+  cambios: Partial<Pick<Barbero, 'nombre' | 'emoji' | 'activo' | 'comision' | 'telefono'>>,
 ): Promise<void> {
   await db.barberos
     .where('uuid')
