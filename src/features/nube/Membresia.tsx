@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { actualizarConfig } from '../../db/config';
+import { actualizarConfig, obtenerConfig, seedConfig } from '../../db/config';
+import { borrarTodo } from '../../db/demo';
 import { chequearLicencia, type EstadoNube } from '../../lib/nube';
 import { Logo } from '../../components/Logo';
 import { IconoCandado } from '../../components/Iconos';
@@ -25,13 +26,24 @@ export function Membresia({ estado, onActiva }: Props) {
     if (!c || cargando) return;
     setCargando(true);
     setError('');
+    const anterior = (await obtenerConfig())?.licenciaCodigo;
     await actualizarConfig({ licenciaCodigo: c });
     const r = await chequearLicencia(c);
-    setCargando(false);
     if (r.activada) {
+      // Código de OTRA barbería en este teléfono: empezamos limpio, si no
+      // arrancaría con los datos y el perfil de la barbería anterior.
+      if (anterior && anterior !== c) {
+        await borrarTodo();
+        await seedConfig();
+        await actualizarConfig({ licenciaCodigo: c, licenciaEstado: r.estado });
+        location.reload();
+        return;
+      }
+      setCargando(false);
       await actualizarConfig({ licenciaEstado: r.estado });
       onActiva();
     } else {
+      setCargando(false);
       setError(
         r.estado === 'suspendida'
           ? 'Ese código está suspendido. Escribinos.'

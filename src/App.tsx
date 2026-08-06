@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { obtenerConfig, actualizarConfig } from './db/config';
+import { obtenerConfig, actualizarConfig, seedConfig } from './db/config';
+import { borrarTodo } from './db/demo';
 import { db } from './db/db';
 import { chequearLicencia, respaldarAhora, restaurarDesdeNube, type EstadoNube } from './lib/nube';
 import { iniciarSync, syncVivoHabilitado } from './lib/sync';
@@ -44,7 +45,8 @@ export default function App() {
   const [sincronizando, setSincronizando] = useState(false);
   /** Ya corrió el sync: si igual no hay datos, la nube estaba vacía. */
   const [syncTermino, setSyncTermino] = useState(false);
-  const syncRef = useRef(false);
+  /** Código con el que ya arrancó el sync en este teléfono. */
+  const syncRef = useRef<string | null>(null);
 
   const listo = config !== undefined;
   const codigo = config?.licenciaCodigo;
@@ -60,8 +62,8 @@ export default function App() {
   // de la nube, que solo necesita /api/backup. Así el barbero que se suma
   // NUNCA termina en "crear barbería" habiendo datos en la nube.
   useEffect(() => {
-    if (syncRef.current || !licencia?.activada || !codigo) return;
-    syncRef.current = true;
+    if (syncRef.current === codigo || !licencia?.activada || !codigo) return;
+    syncRef.current = codigo;
     (async () => {
       const antes = await obtenerConfig();
       const sinDatos = !antes?.onboardingCompletado;
@@ -82,6 +84,26 @@ export default function App() {
       setSyncTermino(true);
     })();
   }, [licencia?.activada, licencia?.plan, codigo]);
+
+  // Este teléfono trae datos de OTRA barbería (le cargaron un código nuevo):
+  // empezamos limpio, si no arrancaría con el equipo y el perfil anteriores.
+  useEffect(() => {
+    const dueno = config?.datosDeCodigo;
+    if (!codigo || !dueno || dueno === codigo) return;
+    (async () => {
+      await borrarTodo();
+      await seedConfig();
+      await actualizarConfig({ licenciaCodigo: codigo });
+      location.reload();
+    })();
+  }, [codigo, config?.datosDeCodigo]);
+
+  // Dejamos anotado de qué barbería son los datos que tiene este teléfono.
+  useEffect(() => {
+    if (!codigo || !config?.onboardingCompletado || config.datosDeCodigo === codigo) return;
+    if (config.datosDeCodigo && config.datosDeCodigo !== codigo) return; // lo limpia el efecto de arriba
+    actualizarConfig({ datosDeCodigo: codigo });
+  }, [codigo, config?.onboardingCompletado, config?.datosDeCodigo]);
 
   // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
   useEffect(() => {

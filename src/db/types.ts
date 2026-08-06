@@ -177,6 +177,8 @@ export interface Config {
   licenciaEstado?: string;
   /** Plan de la membresía (trial | pro | full). Define qué funciones tiene. */
   licenciaPlan?: string;
+  /** A qué barbería (código) pertenecen los datos de este teléfono. */
+  datosDeCodigo?: string;
   /** Timestamp del último respaldo en la nube. */
   ultimoRespaldoEn?: number;
   onboardingCompletado: boolean;
