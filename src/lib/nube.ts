@@ -47,6 +47,9 @@ export async function chequearLicencia(codigo?: string): Promise<EstadoNube> {
 export async function respaldarAhora(codigo: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const [data, stats] = await Promise.all([exportarDatos(), resumenDatos()]);
+    // Nunca subimos una barbería vacía: pisaría el respaldo bueno y el que se
+    // suma después bajaría la nada (y terminaría en "crear barbería").
+    if (!data.barberos?.length) return { ok: false, error: 'vacio' };
     const resp = await fetch('/api/backup', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

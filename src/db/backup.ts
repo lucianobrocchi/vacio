@@ -16,10 +16,23 @@ export interface Volcado {
   config: Partial<Config> | null;
 }
 
-/** Campos de config que NO viajan en el respaldo (son del dispositivo). */
+/**
+ * Campos de config que NO viajan en el respaldo (son de cada dispositivo).
+ * Ojo con `barberoActivoUuid` y `esDuenio`: si viajaran, el barbero que baja
+ * el respaldo entraría como el dueño y vería los números de todo el local.
+ */
 function configParaExportar(config: Config | undefined): Partial<Config> | null {
   if (!config) return null;
-  const { id: _id, licenciaCodigo: _lc, licenciaEstado: _le, ultimoRespaldoEn: _ur, ...resto } = config;
+  const {
+    id: _id,
+    licenciaCodigo: _lc,
+    licenciaEstado: _le,
+    licenciaPlan: _lp,
+    ultimoRespaldoEn: _ur,
+    barberoActivoUuid: _ba,
+    esDuenio: _ed,
+    ...resto
+  } = config;
   return resto;
 }
 
@@ -67,6 +80,9 @@ export async function resumenDatos(): Promise<Record<string, number>> {
 export async function importarDatos(data: Volcado): Promise<void> {
   // v1 = respaldo viejo (sin productos ni ventas); v2 = con stock.
   if (!data || (data.v !== 1 && data.v !== 2)) throw new Error('Respaldo inválido');
+  // Un respaldo sin barberos no es una barbería: no lo damos por bueno (si no,
+  // el equipo que se suma queda "adentro" pero sin nadie a quien elegir).
+  if (!data.barberos?.length) throw new Error('Respaldo vacío');
   await db.transaction(
     'rw',
     [db.barberos, db.servicios, db.cortes, db.turnos, db.bloqueos, db.productos, db.ventas, db.config],
@@ -88,16 +104,27 @@ export async function importarDatos(data: Volcado): Promise<void> {
       if (data.productos?.length) await db.productos.bulkAdd(data.productos as never[]);
       if (data.ventas?.length) await db.ventas.bulkAdd(data.ventas as never[]);
 
-      // Config: actualiza los campos del negocio, preserva la licencia local.
+      // Config: actualiza los campos del negocio, pero conserva lo que es de
+      // ESTE teléfono: su licencia y, sobre todo, quién inició sesión acá.
       if (data.config) {
         const actual = await db.config.toCollection().first();
         if (actual?.id != null) {
-          const { licenciaCodigo, licenciaEstado, ultimoRespaldoEn } = actual;
+          const {
+            licenciaCodigo,
+            licenciaEstado,
+            licenciaPlan,
+            ultimoRespaldoEn,
+            barberoActivoUuid,
+            esDuenio,
+          } = actual;
           await db.config.update(actual.id, {
             ...data.config,
             licenciaCodigo,
             licenciaEstado,
+            licenciaPlan,
             ultimoRespaldoEn,
+            barberoActivoUuid,
+            esDuenio,
             onboardingCompletado: true,
           });
         }

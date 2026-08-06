@@ -392,7 +392,10 @@ function BotonInvitar({
   const link = linkInvitacion(codigo, barbero.uuid);
   const texto = mensajeInvitacion(barbero.nombre, barberia, link, barbero.pin ?? '');
 
+  // Antes de invitar nos aseguramos de que la barbería esté en la nube: si no,
+  // el barbero abre el link y no encuentra nada que bajar.
   async function copiar() {
+    await respaldarAhora(codigo);
     await navigator.clipboard?.writeText(texto);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
@@ -405,6 +408,7 @@ function BotonInvitar({
           href={linkWhatsApp(barbero.telefono, texto)}
           target="_blank"
           rel="noreferrer"
+          onClick={() => respaldarAhora(codigo)}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ok/10 py-2 text-sm font-semibold text-ok"
         >
           <IconoWhatsApp width={15} height={15} /> {c.invitarWpp}

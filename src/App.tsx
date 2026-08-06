@@ -107,12 +107,16 @@ export default function App() {
 
   // Auto-respaldo en la nube cuando la licencia está activa. Solo si el plan
   // incluye respaldo (pro/full).
+  // Depende de onboardingCompletado a propósito: así, apenas la barbería
+  // queda armada, sube a la nube (si no, el primer respaldo bueno tardaba
+  // hasta 20 minutos y el barbero invitado no encontraba nada que bajar).
   useEffect(() => {
     if (!licencia?.activada || !codigo || !capacidades(licencia.plan).respaldoNube) return;
+    if (!config?.onboardingCompletado) return;
     respaldarAhora(codigo);
     const id = setInterval(() => respaldarAhora(codigo), 20 * 60 * 1000);
     return () => clearInterval(id);
-  }, [licencia?.activada, licencia?.plan, codigo]);
+  }, [licencia?.activada, licencia?.plan, codigo, config?.onboardingCompletado]);
 
   // Páginas públicas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;
