@@ -31,6 +31,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Las rutas /api/* son funciones serverless: el service worker NO debe
+        // servirles el index.html cacheado (si no, abrir /api/diag en el
+        // navegador "abre la app" en vez de ejecutar la función).
+        navigateFallbackDenylist: [/^\/api\//],
         // Las fuentes vienen de CDN (Fontshare / Google Fonts). Las cacheamos
         // en runtime para que la app ande 100% offline después de la 1ra carga.
         runtimeCaching: [
