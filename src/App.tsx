@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { obtenerConfig, actualizarConfig } from './db/config';
-import { chequearLicencia, respaldarAhora, type EstadoNube } from './lib/nube';
+import { chequearLicencia, respaldarAhora, restaurarDesdeNube, type EstadoNube } from './lib/nube';
 import { iniciarSync, syncVivoHabilitado } from './lib/sync';
 import { capacidades } from './lib/planes';
 import { BottomNav, type Tab } from './components/BottomNav';
@@ -51,19 +51,35 @@ export default function App() {
   const listo = config !== undefined;
   const codigo = config?.licenciaCodigo;
 
-  // Arranca el sync en vivo (Modelo B) una vez que la licencia está activa.
-  // Solo si el plan lo incluye (pro/full).
+  // Con la licencia activa: arranca el sync en vivo (Modelo B) y, si este
+  // teléfono todavía no tiene los datos de la barbería, los baja.
+  //
+  // El sync en vivo puede no estar disponible (plan sin sync, claves del
+  // navegador ausentes, realtime bloqueado). En ese caso caemos al respaldo
+  // de la nube, que solo necesita /api/backup. Así el barbero que se suma
+  // NUNCA termina en "crear barbería" habiendo datos en la nube.
   useEffect(() => {
-    const syncDelPlan = capacidades(licencia?.plan).syncVivo;
-    if (syncRef.current || !licencia?.activada || !codigo || !syncDelPlan || !syncVivoHabilitado())
-      return;
+    if (syncRef.current || !licencia?.activada || !codigo) return;
     syncRef.current = true;
-    const adoptado = localStorage.getItem(`corte.sync.adoptado.${codigo}`) === '1';
-    if (!adoptado) setSincronizando(true);
-    iniciarSync(codigo).finally(() => {
+    (async () => {
+      const antes = await obtenerConfig();
+      const sinDatos = !antes?.onboardingCompletado;
+      const adoptado = localStorage.getItem(`corte.sync.adoptado.${codigo}`) === '1';
+      if (sinDatos || !adoptado) setSincronizando(true);
+
+      if (capacidades(licencia.plan).syncVivo && syncVivoHabilitado()) {
+        await iniciarSync(codigo).catch(() => undefined);
+      }
+
+      // ¿Seguimos sin los datos de la barbería? Probamos con el respaldo.
+      const despues = await obtenerConfig();
+      if (!despues?.onboardingCompletado) {
+        await restaurarDesdeNube(codigo).catch(() => undefined);
+      }
+
       setSincronizando(false);
       setSyncTermino(true);
-    });
+    })();
   }, [licencia?.activada, licencia?.plan, codigo]);
 
   // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
@@ -127,12 +143,7 @@ export default function App() {
   // a la barbería. Mientras tanto NO le ofrecemos "crear barbería".
   // Si el sync termina y sigue sin datos, la nube estaba vacía → es el primer
   // equipo de la barbería y ahí sí corresponde el onboarding.
-  const uniendose =
-    licencia.activada &&
-    !config.onboardingCompletado &&
-    !syncTermino &&
-    capacidades(licencia.plan).syncVivo &&
-    syncVivoHabilitado();
+  const uniendose = licencia.activada && !config.onboardingCompletado && !syncTermino;
   if (sincronizando || uniendose) return <Splash texto="Sincronizando tu barbería…" />;
 
   if (!config.onboardingCompletado)
