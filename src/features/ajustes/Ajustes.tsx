@@ -24,7 +24,7 @@ import {
 import { cargarDatosDemo, borrarTodo } from '../../db/demo';
 import { respaldarAhora, restaurarDesdeNube } from '../../lib/nube';
 import { capacidades, nombrePlan, beneficios } from '../../lib/planes';
-import { syncActivo, syncConfigurado } from '../../lib/sync';
+import { syncActivo, syncConfigurado, syncUltimoError } from '../../lib/sync';
 import { linkReservas, linkInvitacion, mensajeInvitacion, linkWhatsApp } from '../../lib/mensajes';
 import { formatNumero, parsePesos } from '../../lib/format';
 import { NOMBRES_DIAS, horaAMin, minAHora, formatFecha } from '../../lib/fecha';
@@ -400,7 +400,12 @@ function EstadoSync() {
           activo ? 'bg-ok' : configurado ? 'bg-pendiente' : 'bg-carbon-900/25'
         }`}
       />
-      <span className="text-sm font-semibold text-carbon-900/70">{texto}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-carbon-900/70">{texto}</span>
+        {!activo && syncUltimoError() && (
+          <span className="block break-words text-xs text-rojo">{syncUltimoError()}</span>
+        )}
+      </span>
     </div>
   );
 }

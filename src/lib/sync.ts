@@ -59,6 +59,11 @@ function configCompartida(c: Config): Record<string, unknown> {
 }
 
 let ownerId = '';
+/** Último motivo por el que no arrancó el sync (se muestra en Ajustes). */
+let ultimoError = '';
+export function syncUltimoError(): string {
+  return ultimoError;
+}
 let canal: any = null;
 let drenaje: ReturnType<typeof setInterval> | null = null;
 
@@ -238,8 +243,21 @@ export interface ResultadoSync {
 
 /** Arranca el sync para una barbería (código de licencia). */
 export async function iniciarSync(codigo: string): Promise<ResultadoSync> {
+  ultimoError = '';
   const cli = supa();
-  if (!cli) return { ok: false, error: 'no_cloud' };
+  if (!cli) {
+    ultimoError = 'faltan las claves del navegador';
+    return { ok: false, error: 'no_cloud' };
+  }
+  try {
+    return await arrancar(cli, codigo);
+  } catch (e: any) {
+    ultimoError = String(e?.message ?? e).slice(0, 120);
+    return { ok: false, error: 'excepcion' };
+  }
+}
+
+async function arrancar(cli: any, codigo: string): Promise<ResultadoSync> {
 
   const config = await obtenerConfig();
   const r = await fetch('/api/activar', {
@@ -247,19 +265,29 @@ export async function iniciarSync(codigo: string): Promise<ResultadoSync> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ codigo, barberia: config?.nombreBarberia }),
   });
-  if (r.status === 501) return { ok: false, error: 'no_cloud' };
+  if (r.status === 501) {
+    ultimoError = 'el servidor no tiene Supabase';
+    return { ok: false, error: 'no_cloud' };
+  }
   const d = await r.json();
-  if (!d.activada) return { ok: false, estado: d.estado, error: d.error };
+  if (!d.activada) {
+    ultimoError = `licencia ${d.estado ?? d.error ?? 'no activada'}`;
+    return { ok: false, estado: d.estado, error: d.error };
+  }
 
   const { data: sesion, error } = await cli.auth.signInWithPassword({
     email: d.email,
     password: d.password,
   });
-  if (error || !sesion?.user) return { ok: false, error: 'auth' };
+  if (error || !sesion?.user) {
+    ultimoError = `login: ${error?.message ?? 'sin sesión'}`.slice(0, 120);
+    return { ok: false, error: 'auth' };
+  }
   ownerId = sesion.user.id;
 
   // ¿Primer dispositivo (siembra) o se suma a una barbería existente (adopta)?
   const marca = `corte.sync.adoptado.${codigo}`;
+  try {
   if (lsGet(marca) !== '1') {
     const { count } = await cli
       .from('datos')
@@ -275,6 +303,9 @@ export async function iniciarSync(codigo: string): Promise<ResultadoSync> {
     }
     // Si la nube está vacía y este equipo todavía no armó su barbería, no
     // marcamos nada: primero va el onboarding y los hooks suben esos datos.
+  }
+  } catch (e: any) {
+    ultimoError = `datos: ${String(e?.message ?? e)}`.slice(0, 120);
   }
 
   flags.activo = true;
