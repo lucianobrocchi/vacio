@@ -117,6 +117,8 @@ export interface Config {
   licenciaCodigo?: string;
   /** Último estado conocido de la licencia (activa | suspendida | vencida). */
   licenciaEstado?: string;
+  /** Plan de la membresía (trial | pro | full). Define qué funciones tiene. */
+  licenciaPlan?: string;
   /** Timestamp del último respaldo en la nube. */
   ultimoRespaldoEn?: number;
   onboardingCompletado: boolean;

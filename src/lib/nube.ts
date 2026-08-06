@@ -109,3 +109,5 @@ export const adminCrear = (
 export const adminRevocar = (token: string, codigo: string) => admin(token, { accion: 'revocar', codigo });
 export const adminActivar = (token: string, codigo: string) => admin(token, { accion: 'activar', codigo });
 export const adminBorrar = (token: string, codigo: string) => admin(token, { accion: 'borrar', codigo });
+export const adminCambiarPlan = (token: string, codigo: string, plan: string) =>
+  admin(token, { accion: 'plan', codigo, plan });

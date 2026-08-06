@@ -90,6 +90,9 @@ export const copy = {
   nube: {
     titulo: 'Respaldo en la nube',
     sinCloud: 'El respaldo en la nube todavía no está habilitado para tu cuenta.',
+    tuPlan: 'Tu plan',
+    planSinRespaldo:
+      'Tu plan no incluye respaldo en la nube ni datos en vivo. Escribinos para pasarte a Pro o Full.',
     codigo: 'Tu membresía',
     ultimoRespaldo: 'Último respaldo',
     nunca: 'todavía no',

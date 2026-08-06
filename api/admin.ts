@@ -51,6 +51,17 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true });
     }
 
+    if (accion === 'plan') {
+      if (!codigo) return res.status(400).json({ error: 'sin_codigo' });
+      if (!['trial', 'pro', 'full'].includes(plan)) return res.status(400).json({ error: 'plan_invalido' });
+      await supa(env, `licencias?codigo=eq.${encodeURIComponent(codigo)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ plan }),
+      });
+      return res.status(200).json({ ok: true });
+    }
+
     if (accion === 'borrar') {
       if (!codigo) return res.status(400).json({ error: 'sin_codigo' });
       await supa(env, `licencias?codigo=eq.${encodeURIComponent(codigo)}`, {

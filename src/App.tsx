@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { obtenerConfig, actualizarConfig } from './db/config';
 import { chequearLicencia, respaldarAhora, type EstadoNube } from './lib/nube';
 import { iniciarSync, syncVivoHabilitado } from './lib/sync';
+import { capacidades } from './lib/planes';
 import { BottomNav, type Tab } from './components/BottomNav';
 import { AbrirAjustesContext } from './components/contexto';
 import { Logo } from './components/Logo';
@@ -42,13 +43,16 @@ export default function App() {
   const codigo = config?.licenciaCodigo;
 
   // Arranca el sync en vivo (Modelo B) una vez que la licencia está activa.
+  // Solo si el plan lo incluye (pro/full).
   useEffect(() => {
-    if (syncRef.current || !licencia?.activada || !codigo || !syncVivoHabilitado()) return;
+    const syncDelPlan = capacidades(licencia?.plan).syncVivo;
+    if (syncRef.current || !licencia?.activada || !codigo || !syncDelPlan || !syncVivoHabilitado())
+      return;
     syncRef.current = true;
     const adoptado = localStorage.getItem(`corte.sync.adoptado.${codigo}`) === '1';
     if (!adoptado) setSincronizando(true);
     iniciarSync(codigo).finally(() => setSincronizando(false));
-  }, [licencia?.activada, codigo]);
+  }, [licencia?.activada, licencia?.plan, codigo]);
 
   // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
   useEffect(() => {
@@ -58,7 +62,11 @@ export default function App() {
       const e = await chequearLicencia(codigo);
       if (cancel) return;
       setLicencia(e);
-      if (e.estado) actualizarConfig({ licenciaEstado: e.estado });
+      if (e.estado || e.plan)
+        actualizarConfig({
+          ...(e.estado ? { licenciaEstado: e.estado } : {}),
+          ...(e.plan ? { licenciaPlan: e.plan } : {}),
+        });
     };
     check();
     const id = setInterval(check, 10 * 60 * 1000);
@@ -68,13 +76,14 @@ export default function App() {
     };
   }, [listo, codigo]);
 
-  // Auto-respaldo en la nube cuando la licencia está activa.
+  // Auto-respaldo en la nube cuando la licencia está activa. Solo si el plan
+  // incluye respaldo (pro/full).
   useEffect(() => {
-    if (!licencia?.activada || !codigo) return;
+    if (!licencia?.activada || !codigo || !capacidades(licencia.plan).respaldoNube) return;
     respaldarAhora(codigo);
     const id = setInterval(() => respaldarAhora(codigo), 20 * 60 * 1000);
     return () => clearInterval(id);
-  }, [licencia?.activada, codigo]);
+  }, [licencia?.activada, licencia?.plan, codigo]);
 
   // Página pública de reservas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;

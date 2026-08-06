@@ -22,6 +22,7 @@ import {
 } from '../../db/servicios';
 import { cargarDatosDemo, borrarTodo } from '../../db/demo';
 import { respaldarAhora, restaurarDesdeNube } from '../../lib/nube';
+import { capacidades, nombrePlan, beneficios } from '../../lib/planes';
 import { linkReservas } from '../../lib/mensajes';
 import { formatNumero, parsePesos } from '../../lib/format';
 import { NOMBRES_DIAS, horaAMin, minAHora, formatFecha } from '../../lib/fecha';
@@ -344,6 +345,7 @@ function FilaHorario({ dia, config }: { dia: number; config: Config }) {
 function RespaldoSection({ config }: { config: Config }) {
   const n = copy.nube;
   const codigo = config.licenciaCodigo;
+  const cap = capacidades(config.licenciaPlan);
   const [estado, setEstado] = useState<'idle' | 'respaldando' | 'restaurando' | 'ok' | 'error'>('idle');
 
   if (!codigo) {
@@ -370,41 +372,70 @@ function RespaldoSection({ config }: { config: Config }) {
 
   return (
     <div className="card space-y-3 p-4">
+      {/* Plan + beneficios */}
       <div className="flex items-center justify-between">
         <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">{n.tuPlan}</p>
+          <p className="text-lg font-extrabold text-oro-dark">{nombrePlan(config.licenciaPlan)}</p>
+        </div>
+        <div className="text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">{n.codigo}</p>
           <p className="num text-sm font-bold">{codigo}</p>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
-            {n.ultimoRespaldo}
-          </p>
-          <p className="text-sm font-semibold">
-            {config.ultimoRespaldoEn ? formatFecha(config.ultimoRespaldoEn) : n.nunca}
-          </p>
-        </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          className="btn-primario py-3 text-base"
-          disabled={estado === 'respaldando'}
-          onClick={respaldar}
-        >
-          {estado === 'respaldando' ? n.respaldando : n.respaldar}
-        </button>
-        <button
-          type="button"
-          className="btn-secundario py-3 text-base"
-          disabled={estado === 'restaurando'}
-          onClick={restaurar}
-        >
-          {estado === 'restaurando' ? n.restaurando : n.restaurar}
-        </button>
-      </div>
-      {estado === 'ok' && <p className="text-center text-sm font-semibold text-ok">{n.respaldado}</p>}
-      {estado === 'error' && <p className="text-center text-sm font-semibold text-rojo">{n.error}</p>}
-      <p className="text-xs text-carbon-900/45">{n.ayuda}</p>
+      <ul className="space-y-1.5">
+        {beneficios(config.licenciaPlan).map((b) => (
+          <li
+            key={b.texto}
+            className={`flex items-center gap-2 text-sm ${b.incluido ? '' : 'text-carbon-900/35'}`}
+          >
+            {b.incluido ? (
+              <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-ok/15 text-ok">
+                <IconoCheck width={11} height={11} />
+              </span>
+            ) : (
+              <span className="grid h-4 w-4 shrink-0 place-items-center text-carbon-900/30">·</span>
+            )}
+            {b.texto}
+          </li>
+        ))}
+      </ul>
+
+      {cap.respaldoNube ? (
+        <>
+          <div className="flex items-center justify-between border-t border-carbon-100 pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-carbon-900/40">
+              {n.ultimoRespaldo}
+            </p>
+            <p className="text-sm font-semibold">
+              {config.ultimoRespaldoEn ? formatFecha(config.ultimoRespaldoEn) : n.nunca}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="btn-primario py-3 text-base"
+              disabled={estado === 'respaldando'}
+              onClick={respaldar}
+            >
+              {estado === 'respaldando' ? n.respaldando : n.respaldar}
+            </button>
+            <button
+              type="button"
+              className="btn-secundario py-3 text-base"
+              disabled={estado === 'restaurando'}
+              onClick={restaurar}
+            >
+              {estado === 'restaurando' ? n.restaurando : n.restaurar}
+            </button>
+          </div>
+          {estado === 'ok' && <p className="text-center text-sm font-semibold text-ok">{n.respaldado}</p>}
+          {estado === 'error' && <p className="text-center text-sm font-semibold text-rojo">{n.error}</p>}
+          <p className="text-xs text-carbon-900/45">{n.ayuda}</p>
+        </>
+      ) : (
+        <p className="border-t border-carbon-100 pt-3 text-xs text-carbon-900/55">{n.planSinRespaldo}</p>
+      )}
     </div>
   );
 }

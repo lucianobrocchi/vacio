@@ -15,7 +15,10 @@ import { obtenerConfig } from '../db/config';
 import type { Config } from '../db/types';
 
 export function syncVivoHabilitado(): boolean {
-  return (import.meta.env.VITE_SYNC_VIVO as string | undefined) === '1' && !!supa();
+  // Requiere el cliente de Supabase configurado (claves VITE_*). Quién puede
+  // usar el sync lo decide el plan (ver capacidades). VITE_SYNC_VIVO === '0'
+  // es un apagado de emergencia global (por si hay que cortarlo para todos).
+  return !!supa() && (import.meta.env.VITE_SYNC_VIVO as string | undefined) !== '0';
 }
 
 const TABLAS = ['barberos', 'servicios', 'cortes', 'turnos', 'bloqueos'] as const;

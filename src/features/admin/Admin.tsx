@@ -5,8 +5,10 @@ import {
   adminRevocar,
   adminActivar,
   adminBorrar,
+  adminCambiarPlan,
   type LicenciaAdmin,
 } from '../../lib/nube';
+import { PLAN_ORDEN, nombrePlan } from '../../lib/planes';
 import { Logo } from '../../components/Logo';
 import { IconoCopiar, IconoTacho, IconoCheck, IconoCandado } from '../../components/Iconos';
 
@@ -84,6 +86,12 @@ export function Admin() {
   async function borrar(l: LicenciaAdmin) {
     if (!window.confirm(`¿Borrar ${l.barberia || l.codigo}? Se pierde su respaldo.`)) return;
     await adminBorrar(token, l.codigo);
+    cargar(token);
+  }
+
+  async function cambiarPlan(l: LicenciaAdmin, plan: string) {
+    if (plan === l.plan) return;
+    await adminCambiarPlan(token, l.codigo, plan);
     cargar(token);
   }
 
@@ -207,7 +215,18 @@ export function Admin() {
             <div className="mt-2 flex items-center gap-3 text-xs text-carbon-900/55">
               <span className={`font-semibold ${usada(l) ? 'text-ok' : ''}`}>● {haceCuanto(l.ultimo_uso)}</span>
               <span className="num">{l.stats?.cortes ?? 0} cortes</span>
-              <span className="rounded bg-carbon-100 px-1.5 py-0.5 font-semibold uppercase">{l.plan}</span>
+              <select
+                value={(PLAN_ORDEN as string[]).includes(l.plan) ? l.plan : 'trial'}
+                onChange={(e) => cambiarPlan(l, e.target.value)}
+                aria-label="Cambiar plan"
+                className="cursor-pointer appearance-none rounded bg-oro/15 px-1.5 py-0.5 font-bold uppercase text-oro-dark"
+              >
+                {PLAN_ORDEN.map((p) => (
+                  <option key={p} value={p}>
+                    {nombrePlan(p)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="mt-3 flex gap-2">
               <button
