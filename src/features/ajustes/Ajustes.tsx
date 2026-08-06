@@ -24,7 +24,7 @@ import {
 import { cargarDatosDemo, borrarTodo } from '../../db/demo';
 import { respaldarAhora, restaurarDesdeNube } from '../../lib/nube';
 import { capacidades, nombrePlan, beneficios } from '../../lib/planes';
-import { linkReservas } from '../../lib/mensajes';
+import { linkReservas, linkInvitacion, mensajeInvitacion, linkWhatsApp } from '../../lib/mensajes';
 import { formatNumero, parsePesos } from '../../lib/format';
 import { NOMBRES_DIAS, horaAMin, minAHora, formatFecha } from '../../lib/fecha';
 import { Pantalla } from '../../components/Pantalla';
@@ -37,6 +37,7 @@ import {
   IconoLink,
   IconoMas,
   IconoTacho,
+  IconoWhatsApp,
 } from '../../components/Iconos';
 import type { Barbero, Config, Servicio } from '../../db/types';
 import { copy } from './ajustes.copy';
@@ -142,10 +143,10 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
       <h3 className={tituloSeccion}>{copy.barberos.titulo}</h3>
       <div className="card divide-y divide-carbon/5 p-2">
         {barberos.map((b) => (
+          <div key={b.uuid} className="p-1">
           <button
-            key={b.uuid}
             type="button"
-            className="flex w-full items-center gap-3 p-3 text-left"
+            className="flex w-full items-center gap-3 p-2 text-left"
             onClick={() => {
               setBarberoEditando(b);
               setBarberoSheet(true);
@@ -172,6 +173,11 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
               </span>
             )}
           </button>
+          {/* Invitación: el barbero entra con este link y solo su PIN. */}
+          {b.uuid !== config.barberoActivoUuid && config.licenciaCodigo && (
+            <BotonInvitar barbero={b} codigo={config.licenciaCodigo} barberia={config.nombreBarberia} />
+          )}
+          </div>
         ))}
         <button
           type="button"
@@ -367,6 +373,50 @@ function FilaHorario({ dia, config }: { dia: number; config: Config }) {
           {h.cerrado ? copy.horario.cerrado : 'Abierto'}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Manda (o copia) la invitación del barbero: link + su PIN. */
+function BotonInvitar({
+  barbero,
+  codigo,
+  barberia,
+}: {
+  barbero: Barbero;
+  codigo: string;
+  barberia: string;
+}) {
+  const c = copy.barberos;
+  const [copiado, setCopiado] = useState(false);
+  const link = linkInvitacion(codigo, barbero.uuid);
+  const texto = mensajeInvitacion(barbero.nombre, barberia, link, barbero.pin ?? '');
+
+  async function copiar() {
+    await navigator.clipboard?.writeText(texto);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  return (
+    <div className="flex gap-2 px-2 pb-1">
+      {barbero.telefono ? (
+        <a
+          href={linkWhatsApp(barbero.telefono, texto)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ok/10 py-2 text-sm font-semibold text-ok"
+        >
+          <IconoWhatsApp width={15} height={15} /> {c.invitarWpp}
+        </a>
+      ) : null}
+      <button
+        type="button"
+        onClick={copiar}
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-carbon-100 py-2 text-sm font-semibold text-carbon-900/70"
+      >
+        <IconoCopiar width={15} height={15} /> {copiado ? c.invitacionCopiada : c.copiarInvitacion}
+      </button>
     </div>
   );
 }

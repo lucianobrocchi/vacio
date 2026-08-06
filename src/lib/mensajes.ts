@@ -65,6 +65,31 @@ export function linkReservas(): string {
   return `${location.origin}${location.pathname}#/reservar`;
 }
 
+/**
+ * Link de invitación para un barbero: trae el código de la barbería y quién
+ * es, así el barbero solo pone su PIN. Nunca ve "crear barbería".
+ */
+export function linkInvitacion(codigo: string, barberoUuid: string): string {
+  return `${location.origin}${location.pathname}#/unirse?c=${encodeURIComponent(
+    codigo,
+  )}&b=${encodeURIComponent(barberoUuid)}`;
+}
+
+/** Mensaje listo para mandarle al barbero por WhatsApp. */
+export function mensajeInvitacion(
+  nombre: string,
+  nombreBarberia: string,
+  link: string,
+  pin: string,
+): string {
+  return (
+    `¡Hola ${nombre}! Ya tenés tu cuenta en ${nombreBarberia} 💈\n\n` +
+    `1) Entrá acá: ${link}\n` +
+    `2) Poné tu PIN: ${pin}\n\n` +
+    `Listo. Ahí fichás tus cortes, ves tus estadísticas y tenés tu link de turnos.`
+  );
+}
+
 /** Link de reservas apuntando a un barbero (queda preseleccionado). */
 export function linkReservasBarbero(barberoUuid: string): string {
   return `${linkReservas()}?b=${encodeURIComponent(barberoUuid)}`;

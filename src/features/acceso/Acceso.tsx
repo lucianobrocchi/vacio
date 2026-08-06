@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { listarBarberos, pinCorrecto } from '../../db/barberos';
 import { actualizarConfig } from '../../db/config';
 import { Logo } from '../../components/Logo';
 import { IconoFlechaDer } from '../../components/Iconos';
+import { LS_INVITADO } from './Unirse';
 import type { Barbero } from '../../db/types';
 import { copy } from './acceso.copy';
 
@@ -18,12 +19,30 @@ export function Acceso() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
+  // Si vino por link de invitación, ya sabemos quién es: solo le pedimos el PIN.
+  useEffect(() => {
+    if (elegido || !barberos.length) return;
+    let invitado = '';
+    try {
+      invitado = localStorage.getItem(LS_INVITADO) ?? '';
+    } catch {
+      /* sin storage */
+    }
+    const b = barberos.find((x) => x.uuid === invitado);
+    if (b) setElegido(b);
+  }, [barberos, elegido]);
+
   async function entrar() {
     if (!elegido) return;
     if (!pinCorrecto(elegido, pin)) {
       setError(true);
       setPin('');
       return;
+    }
+    try {
+      localStorage.removeItem(LS_INVITADO);
+    } catch {
+      /* sin storage */
     }
     await actualizarConfig({
       barberoActivoUuid: elegido.uuid,

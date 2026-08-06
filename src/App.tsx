@@ -19,6 +19,7 @@ import { Stock } from './features/stock/Stock';
 import { Tienda } from './features/tienda/Tienda';
 import { Membresia } from './features/nube/Membresia';
 import { Acceso } from './features/acceso/Acceso';
+import { Unirse } from './features/acceso/Unirse';
 import { Admin } from './features/admin/Admin';
 import { AsistenteBurbuja } from './components/AsistenteBurbuja';
 import type { Config } from './db/types';
@@ -43,6 +44,8 @@ export default function App() {
   // gate no llegó a aparecer (sin conexión, versión cacheada, etc.).
   const [pidiendoCodigo, setPidiendoCodigo] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  /** Ya corrió el sync: si igual no hay datos, la nube estaba vacía. */
+  const [syncTermino, setSyncTermino] = useState(false);
   const syncRef = useRef(false);
 
   const listo = config !== undefined;
@@ -57,7 +60,10 @@ export default function App() {
     syncRef.current = true;
     const adoptado = localStorage.getItem(`corte.sync.adoptado.${codigo}`) === '1';
     if (!adoptado) setSincronizando(true);
-    iniciarSync(codigo).finally(() => setSincronizando(false));
+    iniciarSync(codigo).finally(() => {
+      setSincronizando(false);
+      setSyncTermino(true);
+    });
   }, [licencia?.activada, licencia?.plan, codigo]);
 
   // Chequeo de licencia + heartbeat (cada 10 min). Nunca bloquea offline.
@@ -94,6 +100,7 @@ export default function App() {
   // Páginas públicas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;
   if (hash.startsWith('#/tienda')) return <Tienda />;
+  if (hash.startsWith('#/unirse')) return <Unirse />;
   if (hash.startsWith('#/admin')) return <Admin />;
 
   if (config === undefined) return <Splash />;
@@ -116,8 +123,17 @@ export default function App() {
       />
     );
 
-  // Dispositivo que se suma a una barbería: esperamos a bajar sus datos.
-  if (sincronizando) return <Splash texto="Sincronizando tu barbería…" />;
+  // Teléfono con código activo que todavía no bajó los datos: se está sumando
+  // a la barbería. Mientras tanto NO le ofrecemos "crear barbería".
+  // Si el sync termina y sigue sin datos, la nube estaba vacía → es el primer
+  // equipo de la barbería y ahí sí corresponde el onboarding.
+  const uniendose =
+    licencia.activada &&
+    !config.onboardingCompletado &&
+    !syncTermino &&
+    capacidades(licencia.plan).syncVivo &&
+    syncVivoHabilitado();
+  if (sincronizando || uniendose) return <Splash texto="Sincronizando tu barbería…" />;
 
   if (!config.onboardingCompletado)
     return <Onboarding onTengoCodigo={() => setPidiendoCodigo(true)} />;

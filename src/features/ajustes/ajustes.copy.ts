@@ -13,6 +13,9 @@ export const copy = {
   barberos: {
     titulo: 'Barberos',
     agregar: 'Agregar barbero',
+    invitarWpp: 'Invitar',
+    copiarInvitacion: 'Copiar invitación',
+    invitacionCopiada: '¡Copiada!',
     sheet: {
       tituloNuevo: 'Nuevo barbero',
       tituloEditar: 'Editar barbero',
