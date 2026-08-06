@@ -93,7 +93,10 @@ async function admin(token: string, body: Record<string, unknown>): Promise<any>
   });
   if (resp.status === 401) throw new Error('no_autorizado');
   if (resp.status === 501) throw new Error('no_cloud');
-  if (!resp.ok) throw new Error(`${resp.status}`);
+  if (!resp.ok) {
+    const d = await resp.json().catch(() => ({}));
+    throw new Error(d.detail || d.error || `error_${resp.status}`);
+  }
   return resp.json();
 }
 

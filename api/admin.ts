@@ -19,7 +19,9 @@ export default async function handler(req: any, res: any) {
         env,
         'licencias?select=codigo,barberia,plan,estado,creada_en,vence_en,ultimo_uso,stats,nota&order=ultimo_uso.desc.nullslast',
       );
-      return res.status(200).json({ licencias: await r.json() });
+      const texto = await r.text();
+      if (!r.ok) return res.status(502).json({ error: 'db', detail: texto.slice(0, 300) });
+      return res.status(200).json({ licencias: JSON.parse(texto || '[]') });
     }
 
     if (accion === 'crear') {

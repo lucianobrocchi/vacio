@@ -9,9 +9,12 @@ export interface SupaEnv {
 }
 
 export function supaEnv(): SupaEnv | null {
-  const url = process.env.SUPABASE_URL;
+  let url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  return url && key ? { url, key } : null;
+  if (!url || !key) return null;
+  // Tolerante: aceptar la URL con o sin "/rest/v1/" o barra final.
+  url = url.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+  return { url, key };
 }
 
 /** Llama a la REST API de Supabase (PostgREST) con la service key. */
