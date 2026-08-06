@@ -6,6 +6,11 @@ export const copy = {
     titulo: 'Tu barbería',
     nombre: 'Nombre',
     barberoActivo: 'Quién usa este teléfono',
+    sync: {
+      activo: 'Datos en vivo con los demás celulares',
+      conectando: 'Conectando con los demás celulares…',
+      apagado: 'Sin datos en vivo (solo este teléfono)',
+    },
     cambiarBarbero: 'Cambiar de barbero',
     cambiarBarberoAyuda: 'Cierra la sesión en este teléfono y pide el PIN de nuevo.',
     confirmarCambiar: '¿Salir de esta cuenta? Vas a tener que entrar con un PIN.',

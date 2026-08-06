@@ -24,6 +24,7 @@ import {
 import { cargarDatosDemo, borrarTodo } from '../../db/demo';
 import { respaldarAhora, restaurarDesdeNube } from '../../lib/nube';
 import { capacidades, nombrePlan, beneficios } from '../../lib/planes';
+import { syncActivo, syncConfigurado } from '../../lib/sync';
 import { linkReservas, linkInvitacion, mensajeInvitacion, linkWhatsApp } from '../../lib/mensajes';
 import { formatNumero, parsePesos } from '../../lib/format';
 import { NOMBRES_DIAS, horaAMin, minAHora, formatFecha } from '../../lib/fecha';
@@ -108,6 +109,7 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
             <p className="font-semibold">{config.nombreBarberia}</p>
           </Campo>
         )}
+        <EstadoSync />
         <Campo label={copy.barberia.barberoActivo}>
           <div className="flex items-center justify-between gap-3 rounded-2xl bg-carbon-50 px-4 py-3">
             <span className="min-w-0">
@@ -373,6 +375,32 @@ function FilaHorario({ dia, config }: { dia: number; config: Config }) {
           {h.cerrado ? copy.horario.cerrado : 'Abierto'}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Estado del sync en vivo: para saber de un vistazo si los celulares comparten datos. */
+function EstadoSync() {
+  const [, refrescar] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => refrescar((n) => n + 1), 2000);
+    return () => clearInterval(id);
+  }, []);
+  const activo = syncActivo();
+  const configurado = syncConfigurado();
+  const texto = activo
+    ? copy.barberia.sync.activo
+    : configurado
+      ? copy.barberia.sync.conectando
+      : copy.barberia.sync.apagado;
+  return (
+    <div className="flex items-center gap-2 rounded-xl bg-carbon-50 px-3 py-2">
+      <span
+        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+          activo ? 'bg-ok' : configurado ? 'bg-pendiente' : 'bg-carbon-900/25'
+        }`}
+      />
+      <span className="text-sm font-semibold text-carbon-900/70">{texto}</span>
     </div>
   );
 }

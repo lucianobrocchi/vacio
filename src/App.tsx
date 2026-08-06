@@ -113,10 +113,13 @@ export default function App() {
   useEffect(() => {
     if (!licencia?.activada || !codigo || !capacidades(licencia.plan).respaldoNube) return;
     if (!config?.onboardingCompletado) return;
+    // Solo el teléfono del dueño respalda. Si respaldaran todos, el snapshot
+    // de un barbero pisaría el de la barbería y se perderían datos.
+    if (!config.esDuenio) return;
     respaldarAhora(codigo);
     const id = setInterval(() => respaldarAhora(codigo), 20 * 60 * 1000);
     return () => clearInterval(id);
-  }, [licencia?.activada, licencia?.plan, codigo, config?.onboardingCompletado]);
+  }, [licencia?.activada, licencia?.plan, codigo, config?.onboardingCompletado, config?.esDuenio]);
 
   // Páginas públicas (cliente) y panel admin (Luciano): sin gate.
   if (hash.startsWith('#/reservar')) return <Reservar />;

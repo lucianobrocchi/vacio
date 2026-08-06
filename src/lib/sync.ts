@@ -14,6 +14,16 @@ import { flags, pendientes, encolarCambio } from './syncCola';
 import { obtenerConfig } from '../db/config';
 import type { Config } from '../db/types';
 
+/** ¿El sync en vivo está corriendo ahora en este teléfono? */
+export function syncActivo(): boolean {
+  return flags.activo;
+}
+
+/** ¿Este navegador tiene configuradas las claves para el sync en vivo? */
+export function syncConfigurado(): boolean {
+  return !!supa();
+}
+
 export function syncVivoHabilitado(): boolean {
   // Requiere el cliente de Supabase configurado (claves VITE_*). Quién puede
   // usar el sync lo decide el plan (ver capacidades). VITE_SYNC_VIVO === '0'
