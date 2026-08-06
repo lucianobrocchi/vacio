@@ -102,6 +102,8 @@ export interface Producto {
   stock: number;
   /** % que se lleva el barbero por vender este producto (0–100). */
   comision: number;
+  /** Si está cargada, el barbero se lleva estos pesos por unidad (pisa el %). */
+  comisionFija?: number;
   /** Dueño del stock: '' = del local, o el uuid del barbero. */
   barberoUuid: string;
   emoji?: string;
@@ -132,6 +134,8 @@ export interface Venta {
   medioPago: MedioPago;
   /** % de comisión del barbero al momento de vender. */
   comision: number;
+  /** Pesos por unidad al momento de vender (si se usa comisión fija). */
+  comisionFija?: number;
   clienteNombre?: string;
   origen: OrigenVenta;
   updatedAt: number;

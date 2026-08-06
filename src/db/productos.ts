@@ -5,6 +5,9 @@ import type { Producto } from './types';
 /** Comisión por defecto que se lleva el barbero por vender un producto. */
 export const COMISION_PRODUCTO_DEFAULT = 20;
 
+/** Comisión fija sugerida: lo que le queda al barbero por unidad vendida. */
+export const COMISION_PRODUCTO_FIJA_DEFAULT = 1000;
+
 /**
  * Productos visibles para un barbero: los suyos + los del local.
  * Sin `barberoUuid` (o el dueño), devuelve todo el catálogo.
@@ -25,6 +28,7 @@ export async function crearProducto(datos: {
   costo?: number;
   stock?: number;
   comision?: number;
+  comisionFija?: number;
   barberoUuid?: string;
   emoji?: string;
 }): Promise<string> {
@@ -36,6 +40,7 @@ export async function crearProducto(datos: {
     costo: datos.costo ?? 0,
     stock: datos.stock ?? 0,
     comision: datos.comision ?? COMISION_PRODUCTO_DEFAULT,
+    comisionFija: datos.comisionFija,
     barberoUuid: datos.barberoUuid ?? '',
     emoji: datos.emoji,
     orden,

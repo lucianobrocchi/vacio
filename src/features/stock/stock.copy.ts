@@ -35,6 +35,7 @@ export const copy = {
     stock: 'Unidades',
     comision: 'Tu comisión',
     comisionAyuda: '% que te llevás por cada venta.',
+    comisionAyudaFija: 'Lo que te queda por cada unidad vendida.',
     deQuien: '¿De quién es el stock?',
     mio: 'Mío',
     local: 'Del local',

@@ -32,6 +32,7 @@ export async function venderProducto(datos: DatosVenta): Promise<string> {
     barberoUuid: datos.barberoUuid,
     medioPago: datos.medioPago,
     comision: producto.comision,
+    comisionFija: producto.comisionFija,
     clienteNombre: datos.clienteNombre,
     origen: datos.origen ?? 'barbero',
     updatedAt: Date.now(),

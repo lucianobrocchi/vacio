@@ -28,9 +28,9 @@ const SERVICIOS_DEMO = [
 ];
 
 const PRODUCTOS_DEMO = [
-  { nombre: 'Cera mate', precio: 20000, costo: 11000, stock: 10, comision: 20, emoji: '🫙' },
-  { nombre: 'Cera brillante', precio: 20000, costo: 11000, stock: 8, comision: 20, emoji: '✨' },
-  { nombre: 'Polvo texturizador', precio: 18000, costo: 9500, stock: 6, comision: 20, emoji: '🧴' },
+  { nombre: 'Cera mate', precio: 20000, costo: 11000, stock: 10, comision: 0, comisionFija: 1000, emoji: '🫙' },
+  { nombre: 'Cera brillante', precio: 20000, costo: 11000, stock: 8, comision: 0, comisionFija: 1000, emoji: '✨' },
+  { nombre: 'Polvo texturizador', precio: 18000, costo: 9500, stock: 6, comision: 0, comisionFija: 1000, emoji: '🧴' },
 ];
 
 const CLIENTES_DEMO = [
@@ -143,7 +143,8 @@ export async function cargarDatosDemo(barberoExistenteUuid?: string): Promise<vo
     costo: p.costo,
     stock: p.stock,
     comision: p.comision,
-    barberoUuid: i < 2 ? '' : barberosUuids[0],
+    comisionFija: p.comisionFija,
+    barberoUuid: '',
     emoji: p.emoji,
     orden: productosActuales + i + 1,
     activo: 1 as const,
@@ -175,6 +176,7 @@ export async function cargarDatosDemo(barberoExistenteUuid?: string): Promise<vo
         barberoUuid: barberosUuids[Math.floor(rand() * barberosUuids.length)],
         medioPago: (rand() < 0.5 ? 'efectivo' : 'transferencia') as MedioPago,
         comision: producto.comision,
+        comisionFija: producto.comisionFija,
         clienteNombre:
           rand() < 0.5 ? CLIENTES_DEMO[Math.floor(rand() * CLIENTES_DEMO.length)].nombre : undefined,
         origen: rand() < 0.3 ? 'link' : 'barbero',

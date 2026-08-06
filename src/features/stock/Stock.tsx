@@ -5,7 +5,8 @@ import {
   crearProducto,
   actualizarProducto,
   desactivarProducto,
-  COMISION_PRODUCTO_DEFAULT,
+
+  COMISION_PRODUCTO_FIJA_DEFAULT,
 } from '../../db/productos';
 import { venderProducto, ventasEntre } from '../../db/ventas';
 import { listarBarberos, actualizarBarbero } from '../../db/barberos';
@@ -171,7 +172,7 @@ export function Stock({ config }: { config: Config }) {
                     <span className={p.stock === 0 ? 'font-bold text-rojo' : ''}>
                       {p.stock === 0 ? copy.sinStock : copy.quedan(p.stock)}
                     </span>{' '}
-                    · {p.comision}%
+                    · {p.comisionFija ? `$${formatNumero(p.comisionFija)}` : `${p.comision}%`}
                   </p>
                 </button>
                 <button
@@ -242,7 +243,13 @@ function FormProducto({
   const [precio, setPrecio] = useState(producto ? formatNumero(producto.precio) : '');
   const [costo, setCosto] = useState(producto ? formatNumero(producto.costo ?? 0) : '');
   const [stock, setStock] = useState(String(producto?.stock ?? 0));
-  const [comision, setComision] = useState(String(producto?.comision ?? COMISION_PRODUCTO_DEFAULT));
+  // Comisión: en pesos fijos por unidad (lo más común) o en %.
+  const [fija, setFija] = useState(producto ? producto.comisionFija != null : true);
+  const [comision, setComision] = useState(
+    producto
+      ? String(producto.comisionFija ?? producto.comision)
+      : String(COMISION_PRODUCTO_FIJA_DEFAULT),
+  );
   const [mio, setMio] = useState(producto ? !!producto.barberoUuid : true);
 
   const valido = nombre.trim() !== '' && parsePesos(precio) > 0;
@@ -254,7 +261,8 @@ function FormProducto({
       precio: parsePesos(precio),
       costo: parsePesos(costo),
       stock: Number(stock) || 0,
-      comision: Math.min(100, Math.max(0, Number(comision) || 0)),
+      comision: fija ? 0 : Math.min(100, Math.max(0, Number(comision) || 0)),
+      comisionFija: fija ? Math.max(0, parsePesos(comision)) : undefined,
       barberoUuid: mio ? barberoUuid : '',
     };
     if (producto) await actualizarProducto(producto.uuid, datos);
@@ -312,16 +320,35 @@ function FormProducto({
             />
           </Campo>
           <Campo label={f.comision}>
-            <input
-              className="input-texto num"
-              inputMode="numeric"
-              value={comision}
-              onChange={(e) => setComision(e.target.value.replace(/\D/g, ''))}
-              placeholder="20"
-            />
+            <div className="flex gap-1.5">
+              <input
+                className="input-texto num min-w-0 flex-1"
+                inputMode="numeric"
+                value={comision}
+                onChange={(e) => setComision(e.target.value.replace(/\D/g, ''))}
+                placeholder={fija ? '1000' : '20'}
+              />
+              <div className="flex shrink-0 rounded-xl bg-carbon-100 p-0.5 text-sm font-bold">
+                {[
+                  { v: true, l: '$' },
+                  { v: false, l: '%' },
+                ].map((o) => (
+                  <button
+                    key={o.l}
+                    type="button"
+                    onClick={() => setFija(o.v)}
+                    className={`rounded-lg px-2.5 ${fija === o.v ? 'bg-white shadow-card' : 'text-carbon-900/45'}`}
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
           </Campo>
         </div>
-        <p className="-mt-1 text-xs text-carbon-900/45">{f.comisionAyuda}</p>
+        <p className="-mt-1 text-xs text-carbon-900/45">
+          {fija ? f.comisionAyudaFija : f.comisionAyuda}
+        </p>
         <Campo label={f.deQuien}>
           <div className="flex gap-2">
             {[
@@ -375,7 +402,9 @@ function FormVenta({
   const [guardando, setGuardando] = useState(false);
 
   const total = producto.precio * cantidad;
-  const ganancia = Math.round((total * producto.comision) / 100);
+  const ganancia = producto.comisionFija
+    ? producto.comisionFija * cantidad
+    : Math.round((total * producto.comision) / 100);
 
   async function confirmar() {
     if (guardando) return;

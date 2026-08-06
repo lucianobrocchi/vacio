@@ -116,8 +116,9 @@ export function porBarbero(cortes: Corte[]): PuntoBarbero[] {
 /** Total cobrado por una venta (precio unitario × cantidad). */
 export const totalVenta = (v: Venta): number => v.precio * v.cantidad;
 
-/** Lo que se lleva el barbero por esa venta. */
-export const comisionVenta = (v: Venta): number => Math.round((totalVenta(v) * v.comision) / 100);
+/** Lo que se lleva el barbero por esa venta (pesos fijos por unidad o %). */
+export const comisionVenta = (v: Venta): number =>
+  v.comisionFija ? v.comisionFija * v.cantidad : Math.round((totalVenta(v) * v.comision) / 100);
 
 /** Lo que costó la mercadería vendida (para el margen real del local). */
 export const costoVenta = (v: Venta): number => (v.costo ?? 0) * v.cantidad;
