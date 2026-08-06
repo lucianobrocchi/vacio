@@ -15,6 +15,9 @@ export const copy = {
   },
   sheet: {
     tituloNuevo: 'Fichar corte',
+    productos: '¿Se llevó algo?',
+    sumar: 'Sumar',
+    ficharTotal: (t: number) => `Fichar · $ ${t.toLocaleString('es-AR')}`,
     tituloEditar: 'Editar corte',
     servicio: 'Servicio',
     precio: 'Precio',
