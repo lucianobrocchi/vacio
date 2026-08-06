@@ -27,6 +27,7 @@ export const copy = {
       telefonoAyuda: 'Ahí le llegan los pedidos de productos de su link de venta.',
       pin: 'PIN de acceso',
       pinAyuda: 'Con estos 4 números entra desde su teléfono. Pasáselo a él.',
+      pinInvalido: 'El PIN tiene que ser de 4 números.',
       pinNuevo: 'Generar otro',
       esDuenio: 'Es dueño',
       esDuenioAyuda: 'Puede ver la facturación completa del local (pestaña Barbería).',

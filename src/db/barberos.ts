@@ -68,9 +68,12 @@ export async function obtenerBarbero(barberoUuid: string): Promise<Barbero | und
 
 /**
  * Valida el PIN de un barbero para entrar desde un teléfono.
- * Si todavía no tiene PIN cargado, lo dejamos pasar (instalaciones viejas).
+ *
+ * La cuenta del dueño SIEMPRE pide PIN: es la que ve la facturación del
+ * local. Un barbero sin PIN cargado (instalación vieja que no pasó por la
+ * migración) puede entrar sin él, para no dejar a nadie afuera.
  */
 export function pinCorrecto(barbero: Barbero, pin: string): boolean {
-  if (!barbero.pin) return true;
+  if (!barbero.pin) return !barbero.esDuenio;
   return barbero.pin === pin.trim();
 }

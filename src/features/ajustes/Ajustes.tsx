@@ -599,15 +599,19 @@ function BarberoSheet({
     setEsDuenio(!!barbero?.esDuenio);
   }, [abierto, barbero]);
 
+  // Sin PIN de 4 dígitos no se guarda: si no, esa cuenta quedaría abierta.
+  const pinValido = /^\d{4}$/.test(pin.trim());
+  const valido = nombre.trim() !== '' && pinValido;
+
   async function guardar() {
-    if (!nombre.trim()) return;
+    if (!valido) return;
     const pct = Math.max(0, Math.min(100, comision));
     const datos = {
       nombre: nombre.trim(),
       emoji: emoji.trim() || undefined,
       comision: pct,
       telefono: telefono.trim() || undefined,
-      pin: pin.trim() || undefined,
+      pin: pin.trim(),
       esDuenio,
     };
     if (barbero) await actualizarBarbero(barbero.uuid, datos);
@@ -684,7 +688,11 @@ function BarberoSheet({
               {c.pinNuevo}
             </button>
           </div>
-          <span className="mt-1 block text-xs text-carbon-900/50">{c.pinAyuda}</span>
+          <span
+            className={`mt-1 block text-xs ${pinValido ? 'text-carbon-900/50' : 'font-semibold text-rojo'}`}
+          >
+            {pinValido ? c.pinAyuda : c.pinInvalido}
+          </span>
         </Campo>
 
         {/* Es dueño: ve los números de todo el local. */}
@@ -710,7 +718,7 @@ function BarberoSheet({
           </span>
         </button>
 
-        <button type="button" className="btn-primario" disabled={!nombre.trim()} onClick={guardar}>
+        <button type="button" className="btn-primario" disabled={!valido} onClick={guardar}>
           {c.guardar}
         </button>
         {barbero && !esElActivo && (
