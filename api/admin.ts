@@ -2,7 +2,7 @@
 // acciones: listar · crear · revocar · activar · borrar
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { supaEnv, supa, generarCodigo } from './_supabase';
+import { supaEnv, supa, generarCodigo } from './_supabase.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });

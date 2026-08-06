@@ -4,7 +4,7 @@
 // crudo de una consulta a `licencias`. No expone las claves.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { supaEnv } from './_supabase';
+import { supaEnv } from './_supabase.js';
 
 export default async function handler(req: any, res: any) {
   // Todo el handler va dentro de un try: si algo explota, devolvemos el error

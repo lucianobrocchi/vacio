@@ -3,7 +3,7 @@
 // accion 'restaurar'→ devuelve el último respaldo.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { supaEnv, supa } from './_supabase';
+import { supaEnv, supa } from './_supabase.js';
 
 async function licenciaActiva(env: any, codigo: string) {
   const r = await supa(env, `licencias?codigo=eq.${encodeURIComponent(codigo)}&select=estado,vence_en`);

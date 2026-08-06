@@ -3,7 +3,7 @@
 // - Con código → valida, marca "último uso" y devuelve el estado.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { supaEnv, supa } from './_supabase';
+import { supaEnv, supa } from './_supabase.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });

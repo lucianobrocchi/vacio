@@ -6,7 +6,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createHmac } from 'crypto';
-import { supaEnv, supa } from './_supabase';
+import { supaEnv, supa } from './_supabase.js';
 
 function emailDe(codigo: string): string {
   return `barberia-${codigo.toLowerCase().replace(/[^a-z0-9]/g, '')}@corte.app`;
