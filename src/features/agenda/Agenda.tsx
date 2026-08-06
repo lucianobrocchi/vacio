@@ -36,8 +36,10 @@ export function Agenda({ config }: { config: Config }) {
   const [horaInicial, setHoraInicial] = useState<string | undefined>();
 
   const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
-  const turnos = useLiveQuery(() => turnosDelDia(dia, barberoUuid), [dia, barberoUuid]);
-  const bloqueos = useLiveQuery(() => bloqueosDelDia(dia, barberoUuid), [dia, barberoUuid]) ?? [];
+  // Un barbero ve solo su agenda. El dueño puede mirar la de cualquiera.
+  const viendo = config.esDuenio ? barberoUuid : config.barberoActivoUuid;
+  const turnos = useLiveQuery(() => turnosDelDia(dia, viendo), [dia, viendo]);
+  const bloqueos = useLiveQuery(() => bloqueosDelDia(dia, viendo), [dia, viendo]) ?? [];
 
   const horario = config.horario[desdeClave(dia).getDay()];
   const visibles = (turnos ?? []).filter((t) => t.estado !== 'cancelado');
@@ -62,7 +64,9 @@ export function Agenda({ config }: { config: Config }) {
 
   return (
     <Pantalla titulo={copy.titulo} subtitulo={formatFechaLarga(dia)}>
-      <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+      {config.esDuenio && (
+        <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+      )}
       <TiraDias dia={dia} onCambiar={setDia} />
 
       <div className="mb-4 flex items-center gap-3">
@@ -178,7 +182,7 @@ export function Agenda({ config }: { config: Config }) {
         onCerrar={() => setTurnoSheet(false)}
         config={config}
         dia={dia}
-        barberoUuid={barberoUuid}
+        barberoUuid={viendo}
         turno={turnoEditando}
         horaInicial={horaInicial}
       />
@@ -187,7 +191,7 @@ export function Agenda({ config }: { config: Config }) {
         onCerrar={() => setBloqueoSheet(false)}
         config={config}
         dia={dia}
-        barberoUuid={barberoUuid}
+        barberoUuid={viendo}
       />
       {turnoDetalle && (
         <TurnoDetalle

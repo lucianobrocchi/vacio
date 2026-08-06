@@ -2,6 +2,7 @@
 
 export const copy = {
   titulo: 'Fichar',
+  saludo: (nombre: string) => `Hola, ${nombre}`,
   hoy: {
     cortes: (n: number) => (n === 1 ? '1 corte' : `${n} cortes`),
     efectivo: 'Efectivo',

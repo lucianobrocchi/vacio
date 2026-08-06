@@ -19,7 +19,10 @@ export function Fichar({ config }: { config: Config }) {
 
   const hoy = claveDia();
   const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
-  const cortes = useLiveQuery(() => cortesDelDia(hoy, barberoUuid), [hoy, barberoUuid]);
+  // Un barbero ve solo lo suyo. El dueño puede mirar el de cualquiera.
+  const viendo = config.esDuenio ? barberoUuid : config.barberoActivoUuid;
+  const cortes = useLiveQuery(() => cortesDelDia(hoy, viendo), [hoy, viendo]);
+  const yo = barberos.find((b) => b.uuid === config.barberoActivoUuid);
 
   const t = totales(cortes ?? []);
 
@@ -34,8 +37,11 @@ export function Fichar({ config }: { config: Config }) {
   }
 
   return (
-    <Pantalla titulo={copy.titulo} subtitulo={formatFechaLarga()}>
-      <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+    <Pantalla titulo={yo ? copy.saludo(yo.nombre) : copy.titulo} subtitulo={formatFechaLarga()}>
+      {/* Solo el dueño puede mirar los números de otro barbero. */}
+      {config.esDuenio && (
+        <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+      )}
 
       {/* Resumen del día */}
       <div className="card mb-4 p-5">
@@ -100,7 +106,7 @@ export function Fichar({ config }: { config: Config }) {
       <FicharSheet
         abierto={sheetAbierto}
         onCerrar={() => setSheetAbierto(false)}
-        barberoUuid={barberoUuid}
+        barberoUuid={viendo}
         corte={corteEditando}
       />
     </Pantalla>

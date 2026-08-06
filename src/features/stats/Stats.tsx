@@ -35,10 +35,12 @@ export function Stats({ config }: { config: Config }) {
   const [desde, hasta] = rangoPeriodo(periodo);
   const [desdeAnt, hastaAnt] = rangoAnterior(periodo);
 
-  const cortes = useLiveQuery(() => cortesEntre(desde, hasta, barberoUuid), [desde, hasta, barberoUuid]);
+  // Un barbero ve solo sus estadísticas. El dueño puede mirar las de cualquiera.
+  const viendo = config.esDuenio ? barberoUuid : config.barberoActivoUuid;
+  const cortes = useLiveQuery(() => cortesEntre(desde, hasta, viendo), [desde, hasta, viendo]);
   const cortesAnt = useLiveQuery(
-    () => cortesEntre(desdeAnt, hastaAnt, barberoUuid),
-    [desdeAnt, hastaAnt, barberoUuid],
+    () => cortesEntre(desdeAnt, hastaAnt, viendo),
+    [desdeAnt, hastaAnt, viendo],
   );
 
   const t = totales(cortes ?? []);
@@ -64,7 +66,9 @@ export function Stats({ config }: { config: Config }) {
 
   return (
     <Pantalla titulo={copy.titulo}>
-      <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+      {config.esDuenio && (
+        <BarberoChips barberos={barberos} activoUuid={barberoUuid} onCambiar={setBarberoUuid} />
+      )}
 
       {/* Selector de período */}
       <div className="mb-4 flex rounded-2xl bg-carbon-100 p-1">

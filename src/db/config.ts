@@ -25,7 +25,17 @@ export async function seedConfig(): Promise<void> {
 }
 
 export async function obtenerConfig(): Promise<Config | undefined> {
-  return db.config.toCollection().first();
+  const config = await db.config.toCollection().first();
+  if (!config) return undefined;
+  // Blindaje: una config que llega de la nube (o de una versión vieja) puede
+  // venir sin horario. Sin esto, la agenda se rompe con pantalla en blanco.
+  return {
+    ...config,
+    horario: Array.isArray(config.horario) && config.horario.length === 7
+      ? config.horario
+      : horarioDefault(),
+    duracionTurnoDefault: config.duracionTurnoDefault || 30,
+  };
 }
 
 export async function actualizarConfig(cambios: Partial<Config>): Promise<void> {
