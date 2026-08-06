@@ -40,7 +40,9 @@ function configCompartida(c: Config): Record<string, unknown> {
     nombreBarberia: c.nombreBarberia,
     horario: c.horario,
     duracionTurnoDefault: c.duracionTurnoDefault,
-    esDuenio: c.esDuenio,
+    // OJO: `esDuenio` y `barberoActivoUuid` NO viajan. Son de cada teléfono:
+    // los define quién inició sesión acá (ver features/acceso). Si se
+    // compartieran, todos los barberos verían los números del local.
     googleClientId: c.googleClientId,
     feedbackEmail: c.feedbackEmail,
   };

@@ -6,6 +6,7 @@ import {
   crearBarbero,
   actualizarBarbero,
   desactivarBarbero,
+  generarPin,
   COMISION_DEFAULT,
 } from '../../db/barberos';
 import {
@@ -44,6 +45,9 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
   const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
   const servicios = useLiveQuery(() => listarServicios(), []) ?? [];
 
+  /** El barbero que usa este teléfono. */
+  const yo = barberos.find((b) => b.uuid === config.barberoActivoUuid);
+
   const [nombre, setNombre] = useState(config.nombreBarberia);
   const [barberoSheet, setBarberoSheet] = useState(false);
   const [barberoEditando, setBarberoEditando] = useState<Barbero | undefined>();
@@ -80,58 +84,61 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
 
   const tituloSeccion = 'mb-2 mt-6 text-sm font-bold uppercase tracking-wide text-carbon-900/40';
 
+  // Solo el dueño maneja el equipo, los precios, el horario y los datos.
+  // Un barbero entra a Ajustes para su perfil y su Google Calendar.
+  const duenio = config.esDuenio;
+
   return (
     <Pantalla titulo={copy.titulo} volver={onCerrar}>
       {/* Barbería */}
       <h3 className={tituloSeccion}>{copy.barberia.titulo}</h3>
       <div className="card space-y-4 p-4">
-        <Campo label={copy.barberia.nombre}>
-          <input
-            className="input-texto"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            onBlur={() => nombre.trim() && actualizarConfig({ nombreBarberia: nombre.trim() })}
-          />
-        </Campo>
-        {barberos.length > 1 && (
-          <Campo label={copy.barberia.barberoActivo}>
-            <select
-              className="input-texto appearance-none"
-              value={config.barberoActivoUuid}
-              onChange={(e) => actualizarConfig({ barberoActivoUuid: e.target.value })}
-            >
-              {barberos.map((b) => (
-                <option key={b.uuid} value={b.uuid}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
+        {duenio ? (
+          <Campo label={copy.barberia.nombre}>
+            <input
+              className="input-texto"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              onBlur={() => nombre.trim() && actualizarConfig({ nombreBarberia: nombre.trim() })}
+            />
+          </Campo>
+        ) : (
+          <Campo label={copy.barberia.nombre}>
+            <p className="font-semibold">{config.nombreBarberia}</p>
           </Campo>
         )}
-        <button
-          type="button"
-          className="flex w-full items-center justify-between"
-          onClick={() => actualizarConfig({ esDuenio: !config.esDuenio })}
-        >
-          <span className="text-left">
-            <span className="block font-semibold">{copy.barberia.esDuenio}</span>
-            <span className="block text-sm text-carbon-900/50">{copy.barberia.esDuenioAyuda}</span>
+        <Campo label={copy.barberia.barberoActivo}>
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-carbon-50 px-4 py-3">
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">
+                {yo ? `${yo.emoji ? `${yo.emoji} ` : ''}${yo.nombre}` : '—'}
+              </span>
+              {config.esDuenio && (
+                <span className="text-xs font-semibold uppercase tracking-wide text-oro-dark">
+                  {copy.barberos.sheet.esDuenio}
+                </span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.confirm(copy.barberia.confirmarCambiar)) return;
+                actualizarConfig({ barberoActivoUuid: '', esDuenio: false });
+              }}
+              className="shrink-0 rounded-xl bg-carbon-100 px-3 py-2 text-sm font-semibold text-carbon-900/70"
+            >
+              {copy.barberia.cambiarBarbero}
+            </button>
+          </div>
+          <span className="mt-1 block text-xs text-carbon-900/50">
+            {copy.barberia.cambiarBarberoAyuda}
           </span>
-          <span
-            className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-              config.esDuenio ? 'bg-carbon' : 'bg-carbon/20'
-            }`}
-          >
-            <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${
-                config.esDuenio ? 'left-6' : 'left-1'
-              }`}
-            />
-          </span>
-        </button>
+        </Campo>
       </div>
 
-      {/* Barberos */}
+      {/* Barberos: el dueño da de alta las cuentas y reparte los PIN. */}
+      {duenio && (
+        <>
       <h3 className={tituloSeccion}>{copy.barberos.titulo}</h3>
       <div className="card divide-y divide-carbon/5 p-2">
         {barberos.map((b) => (
@@ -145,7 +152,20 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
             }}
           >
             <span className="text-xl">{b.emoji ?? '💈'}</span>
-            <span className="flex-1 font-semibold">{b.nombre}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold">
+                {b.nombre}
+                {b.esDuenio && (
+                  <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-oro-dark">
+                    {copy.barberos.sheet.esDuenio}
+                  </span>
+                )}
+              </span>
+              {/* El dueño ve el PIN para poder pasárselo al barbero. */}
+              {config.esDuenio && b.pin && (
+                <span className="num block text-xs text-carbon-900/45">PIN {b.pin}</span>
+              )}
+            </span>
             {b.uuid === config.barberoActivoUuid && (
               <span className="rounded-full bg-oro-light px-2.5 py-0.5 text-xs font-bold text-oro-dark">
                 vos
@@ -210,6 +230,8 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
           <FilaHorario key={dia} dia={dia} config={config} />
         ))}
       </div>
+        </>
+      )}
 
       {/* Link de reservas */}
       <h3 className={tituloSeccion}>{copy.reservas.titulo}</h3>
@@ -228,15 +250,21 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
         <p className="text-xs text-carbon-900/45">{copy.reservas.aviso}</p>
       </div>
 
-      {/* Respaldo en la nube */}
-      <h3 className={tituloSeccion}>{copy.nube.titulo}</h3>
-      <RespaldoSection config={config} />
+      {/* Respaldo y membresía: cosas del dueño. */}
+      {duenio && (
+        <>
+          <h3 className={tituloSeccion}>{copy.nube.titulo}</h3>
+          <RespaldoSection config={config} />
+        </>
+      )}
 
-      {/* Google Calendar */}
+      {/* Google Calendar: es de cada teléfono, lo conecta cada barbero. */}
       <h3 className={tituloSeccion}>{copy.google.titulo}</h3>
       <GoogleSection config={config} />
 
-      {/* Datos */}
+      {/* Datos: cargar demo y borrar todo, solo el dueño. */}
+      {duenio && (
+        <>
       <h3 className={tituloSeccion}>{copy.datos.titulo}</h3>
       <div className="card space-y-4 p-4">
         <div>
@@ -264,6 +292,8 @@ export function Ajustes({ config, onCerrar }: { config: Config; onCerrar?: () =>
           <p className="mt-1.5 text-xs text-carbon-900/45">{copy.datos.borrarAyuda}</p>
         </div>
       </div>
+        </>
+      )}
 
       <BarberoSheet
         abierto={barberoSheet}
@@ -555,6 +585,8 @@ function BarberoSheet({
   const [emoji, setEmoji] = useState('');
   const [comision, setComision] = useState(COMISION_DEFAULT);
   const [telefono, setTelefono] = useState('');
+  const [pin, setPin] = useState('');
+  const [esDuenio, setEsDuenio] = useState(false);
 
   useEffect(() => {
     if (!abierto) return;
@@ -562,27 +594,24 @@ function BarberoSheet({
     setEmoji(barbero?.emoji ?? '');
     setComision(barbero?.comision ?? COMISION_DEFAULT);
     setTelefono(barbero?.telefono ?? '');
+    // Al crear uno nuevo ya le proponemos un PIN listo para pasarle.
+    setPin(barbero?.pin ?? generarPin());
+    setEsDuenio(!!barbero?.esDuenio);
   }, [abierto, barbero]);
 
   async function guardar() {
     if (!nombre.trim()) return;
     const pct = Math.max(0, Math.min(100, comision));
-    const tel = telefono.trim() || undefined;
-    if (barbero) {
-      await actualizarBarbero(barbero.uuid, {
-        nombre: nombre.trim(),
-        emoji: emoji.trim() || undefined,
-        comision: pct,
-        telefono: tel,
-      });
-    } else {
-      await crearBarbero({
-        nombre: nombre.trim(),
-        emoji: emoji.trim() || undefined,
-        comision: pct,
-        telefono: tel,
-      });
-    }
+    const datos = {
+      nombre: nombre.trim(),
+      emoji: emoji.trim() || undefined,
+      comision: pct,
+      telefono: telefono.trim() || undefined,
+      pin: pin.trim() || undefined,
+      esDuenio,
+    };
+    if (barbero) await actualizarBarbero(barbero.uuid, datos);
+    else await crearBarbero(datos);
     onCerrar();
   }
 
@@ -635,6 +664,52 @@ function BarberoSheet({
           />
           <span className="mt-1 block text-xs text-carbon-900/50">{c.telefonoAyuda}</span>
         </Campo>
+
+        {/* PIN: con esto entra desde su teléfono. */}
+        <Campo label={c.pin}>
+          <div className="flex gap-2">
+            <input
+              className="input-texto num flex-1 text-center text-2xl tracking-[0.4em]"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="1234"
+            />
+            <button
+              type="button"
+              onClick={() => setPin(generarPin())}
+              className="shrink-0 rounded-2xl bg-carbon-100 px-4 text-sm font-semibold text-carbon-900/70"
+            >
+              {c.pinNuevo}
+            </button>
+          </div>
+          <span className="mt-1 block text-xs text-carbon-900/50">{c.pinAyuda}</span>
+        </Campo>
+
+        {/* Es dueño: ve los números de todo el local. */}
+        <button
+          type="button"
+          className="flex w-full items-center justify-between"
+          onClick={() => setEsDuenio(!esDuenio)}
+        >
+          <span className="text-left">
+            <span className="block font-semibold">{c.esDuenio}</span>
+            <span className="block text-sm text-carbon-900/50">{c.esDuenioAyuda}</span>
+          </span>
+          <span
+            className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+              esDuenio ? 'bg-carbon' : 'bg-carbon/20'
+            }`}
+          >
+            <span
+              className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${
+                esDuenio ? 'left-6' : 'left-1'
+              }`}
+            />
+          </span>
+        </button>
+
         <button type="button" className="btn-primario" disabled={!nombre.trim()} onClick={guardar}>
           {c.guardar}
         </button>

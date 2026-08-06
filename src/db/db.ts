@@ -33,6 +33,24 @@ export class CorteDB extends Dexie {
       productos: '++id, &uuid, orden, barberoUuid',
       ventas: '++id, &uuid, fecha, dia, barberoUuid, productoUuid',
     });
+
+    // v3: acceso por barbero (PIN + rol). Para los que ya venían usando la
+    // app: el que estaba en "modo dueño" queda como dueño, y todos reciben
+    // un PIN para poder entrar desde su propio teléfono.
+    this.version(3).upgrade(async (tx) => {
+      const config = await tx.table('config').toCollection().first();
+      const barberos = await tx.table('barberos').toArray();
+      for (const b of barberos) {
+        const cambios: Partial<Barbero> = {};
+        if (!b.pin) cambios.pin = String(Math.floor(1000 + Math.random() * 9000));
+        if (b.esDuenio == null) {
+          cambios.esDuenio = !!config?.esDuenio && config.barberoActivoUuid === b.uuid;
+        }
+        if (Object.keys(cambios).length) {
+          await tx.table('barberos').where('uuid').equals(b.uuid).modify(cambios);
+        }
+      }
+    });
   }
 }
 

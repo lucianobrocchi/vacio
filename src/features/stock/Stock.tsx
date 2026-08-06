@@ -8,6 +8,7 @@ import {
   COMISION_PRODUCTO_DEFAULT,
 } from '../../db/productos';
 import { venderProducto, ventasEntre } from '../../db/ventas';
+import { listarBarberos, actualizarBarbero } from '../../db/barberos';
 import { totalesVentas, totalVenta, comisionVenta } from '../../lib/stats';
 import { rangoPeriodo } from '../../lib/fecha';
 import { formatPesos, formatNumero, parsePesos } from '../../lib/format';
@@ -35,6 +36,8 @@ export function Stock({ config }: { config: Config }) {
   const [copiado, setCopiado] = useState(false);
 
   const productos = useLiveQuery(() => listarProductos({ barberoUuid: yo }), [yo]) ?? [];
+  const barberos = useLiveQuery(() => listarBarberos(), []) ?? [];
+  const miBarbero = barberos.find((b) => b.uuid === yo);
   const [desde, hasta] = rangoPeriodo(periodo);
   const ventas = useLiveQuery(() => ventasEntre(desde, hasta, yo), [desde, hasta, yo]) ?? [];
 
@@ -109,6 +112,31 @@ export function Stock({ config }: { config: Config }) {
           )}
         </button>
         <p className="mt-2 text-xs text-carbon-900/45">{copy.miLinkAyuda}</p>
+
+        {/* Su WhatsApp: sin esto los pedidos del link no le llegan. */}
+        <div className="mt-3 border-t border-carbon-100 pt-3">
+          <label className="mb-1.5 block text-sm font-semibold text-carbon-900/70" htmlFor="mi-wpp">
+            {copy.tuWhatsapp}
+          </label>
+          <input
+            id="mi-wpp"
+            className="input-texto num py-2.5"
+            type="tel"
+            inputMode="tel"
+            defaultValue={miBarbero?.telefono ?? ''}
+            key={miBarbero?.uuid ?? 'sin'}
+            placeholder={copy.tuWhatsappPh}
+            onBlur={(e) => {
+              const tel = e.target.value.trim();
+              if (miBarbero && tel !== (miBarbero.telefono ?? '')) {
+                actualizarBarbero(miBarbero.uuid, { telefono: tel || undefined });
+              }
+            }}
+          />
+          {!miBarbero?.telefono && (
+            <p className="mt-1 text-xs font-semibold text-rojo">{copy.sinTelefono}</p>
+          )}
+        </div>
       </div>
 
       {/* Productos */}

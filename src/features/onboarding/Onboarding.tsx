@@ -29,7 +29,9 @@ export function Onboarding() {
   async function terminar() {
     if (guardando) return;
     setGuardando(true);
-    const barberoUuid = await crearBarbero({ nombre: tuNombre });
+    // El que instala es el primero del equipo; si marcó "soy el dueño",
+    // queda como dueño y es el único que ve los números del local.
+    const barberoUuid = await crearBarbero({ nombre: tuNombre, esDuenio });
     for (const [i, s] of SERVICIOS_INICIALES.entries()) {
       if (!seleccion[i].elegido) continue;
       await crearServicio({

@@ -18,6 +18,10 @@ export interface Barbero {
   comision: number;
   /** Su WhatsApp: ahí le llegan los pedidos de productos de su link. */
   telefono?: string;
+  /** PIN de 4 dígitos para entrar desde su teléfono. Lo maneja el dueño. */
+  pin?: string;
+  /** Si es dueño: ve la pestaña Barbería con los números de todo el local. */
+  esDuenio?: boolean;
   orden: number;
   activo: 0 | 1;
   updatedAt: number;

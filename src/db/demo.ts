@@ -28,10 +28,9 @@ const SERVICIOS_DEMO = [
 ];
 
 const PRODUCTOS_DEMO = [
-  { nombre: 'Pomada efecto mate', precio: 9000, costo: 5200, stock: 12, comision: 25, emoji: '🫙' },
-  { nombre: 'Shampoo anticaída', precio: 12000, costo: 7500, stock: 8, comision: 20, emoji: '🧴' },
-  { nombre: 'Aceite para barba', precio: 8500, costo: 4800, stock: 6, comision: 25, emoji: '🧔' },
-  { nombre: 'Gorra del local', precio: 15000, costo: 8000, stock: 4, comision: 15, emoji: '🧢' },
+  { nombre: 'Cera mate', precio: 20000, costo: 11000, stock: 10, comision: 20, emoji: '🫙' },
+  { nombre: 'Cera brillante', precio: 20000, costo: 11000, stock: 8, comision: 20, emoji: '✨' },
+  { nombre: 'Polvo texturizador', precio: 18000, costo: 9500, stock: 6, comision: 20, emoji: '🧴' },
 ];
 
 const CLIENTES_DEMO = [

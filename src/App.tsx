@@ -18,6 +18,7 @@ import { Reservar } from './features/reservar/Reservar';
 import { Stock } from './features/stock/Stock';
 import { Tienda } from './features/tienda/Tienda';
 import { Membresia } from './features/nube/Membresia';
+import { Acceso } from './features/acceso/Acceso';
 import { Admin } from './features/admin/Admin';
 import { AsistenteBurbuja } from './components/AsistenteBurbuja';
 import type { Config } from './db/types';
@@ -102,6 +103,10 @@ export default function App() {
   if (sincronizando) return <Splash texto="Sincronizando tu barbería…" />;
 
   if (!config.onboardingCompletado) return <Onboarding />;
+
+  // Teléfono sin barbero identificado (recién sumado a la barbería o después
+  // de "cambiar de barbero"): que entre con su PIN.
+  if (!config.barberoActivoUuid) return <Acceso />;
 
   return <AppShell config={config} />;
 }
